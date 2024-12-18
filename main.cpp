@@ -6,14 +6,21 @@
 #include <filesystem>
 #include <numeric>
 
+/* Cambios propuestos
+ * Preguntar al usuario si quiere añadir más datos y ponerlos en el documento original
+ * Hacer que el usuario ingrese el nombre del archivo en lugar de que lea solo el "archivo.csv"
+ * Configurar las operaciones aritmeticas para que de un resultado válido
+ * Análisis de datos
+ */
+
 using namespace std;
 namespace fs = std::filesystem;
 
 // Función para leer un archivo CSV
-vector<vector<string>> readCSV(const string& filename) {
-    ifstream file(filename);
+vector<vector<string>> readCSV(const string& nombreArchivo) {
+    ifstream file(nombreArchivo);
     if (!file) {
-        cerr << "Error al abrir el archivo: " << filename << endl;
+        cerr << "Error al abrir el archivo: " << nombreArchivo << endl;
         exit(1);
     }
 
@@ -38,11 +45,11 @@ vector<vector<string>> readCSV(const string& filename) {
 }
 
 // Función para contar una palabra específica
-int countWordOccurrences(const vector<vector<string>>& content, const string& word) {
+int contadorPalabras(const vector<vector<string>>& content, const string& palabras) {
     int count = 0;
     for (const auto& row : content) {
         for (const auto& cell : row) {
-            if (cell == word) {
+            if (cell == palabras) {
                 count++;
             }
         }
@@ -51,13 +58,13 @@ int countWordOccurrences(const vector<vector<string>>& content, const string& wo
 }
 
 // Función para reemplazar una palabra por otra en el CSV
-vector<vector<string>> replaceWord(const vector<vector<string>>& content, const string& oldWord, const string& newWord) {
+vector<vector<string>> remplazarPalabra(const vector<vector<string>>& content, const string& palabraAnterior, const string& nuevaPalabra) {
     vector<vector<string>> modifiedContent = content;
 
     for (auto& row : modifiedContent) {
         for (auto& cell : row) {
-            if (cell == oldWord) {
-                cell = newWord;
+            if (cell == palabraAnterior) {
+                cell = nuevaPalabra;
             }
         }
     }
@@ -110,7 +117,7 @@ int main() {
     cout << "\n¿Qué palabra deseas buscar? ";
     cin >> wordToFind;
 
-    int occurrences = countWordOccurrences(content, wordToFind);
+    int occurrences = contadorPalabras(content, wordToFind);
     cout << "La palabra '" << wordToFind << "' se encontró " << occurrences << " veces.\n";
 
     // 3. Preguntar si se desea reemplazar la palabra
@@ -120,11 +127,11 @@ int main() {
 
     vector<vector<string>> modifiedContent = content;
     if (replaceChoice == 's' || replaceChoice == 'S') {
-        string newWord;
+        string nuevaPalabra;
         cout << "¿Por qué palabra deseas reemplazar '" << wordToFind << "'? ";
-        cin >> newWord;
+        cin >> nuevaPalabra;
 
-        modifiedContent = replaceWord(content, wordToFind, newWord);
+        modifiedContent = remplazarPalabra(content, wordToFind, nuevaPalabra);
         cout << "\nContenido después de reemplazar:\n";
         for (const auto& row : modifiedContent) {
             for (const auto& cell : row) {
