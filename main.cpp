@@ -6,50 +6,43 @@
 #include <filesystem>
 #include <numeric>
 
-/* Cambios propuestos
- * Preguntar al usuario si quiere añadir más datos y ponerlos en el documento original
- * Hacer que el usuario ingrese el nombre del archivo en lugar de que lea solo el "archivo.csv"
- * Configurar las operaciones aritmeticas para que de un resultado válido
- * Análisis de datos
- */
-
 using namespace std;
 namespace fs = std::filesystem;
 
 // Función para leer un archivo CSV
-vector<vector<string>> readCSV(const string& nombreArchivo) {
-    ifstream file(nombreArchivo);
-    if (!file) {
+vector<vector<string>> leerCSV(const string& nombreArchivo) {
+    ifstream archivo(nombreArchivo);
+    if (!archivo) {
         cerr << "Error al abrir el archivo: " << nombreArchivo << endl;
         exit(1);
     }
 
-    string line;
-    vector<vector<string>> content;
+    string linea;
+    vector<vector<string>> contenido;
 
     // Leer línea por línea
-    while (getline(file, line)) {
-        stringstream ss(line);
+    while (getline(archivo, linea)) {
+        stringstream ss(linea);
         string item;
-        vector<string> row;
+        vector<string> fila;
 
         // Dividir cada línea por comas
         while (getline(ss, item, ',')) {
-            row.push_back(item);
+            fila.push_back(item);
         }
-        content.push_back(row);
+        contenido.push_back(fila);
     }
 
-    file.close();
-    return content;
+    archivo.close();
+    return contenido;
 }
 
-// Función para contar una palabra específica
-int contadorPalabras(const vector<vector<string>>& content, const string& palabras) {
+// Función para contar una palabra específica en el contenido del CSV
+int contarPalabras(const vector<vector<string>>& contenido, const string& palabra) {
     int count = 0;
-    for (const auto& row : content) {
-        for (const auto& cell : row) {
-            if (cell == palabras) {
+    for (const auto& fila : contenido) {
+        for (const auto& celda : fila) {
+            if (celda == palabra) {
                 count++;
             }
         }
@@ -57,115 +50,147 @@ int contadorPalabras(const vector<vector<string>>& content, const string& palabr
     return count;
 }
 
-// Función para reemplazar una palabra por otra en el CSV
-vector<vector<string>> remplazarPalabra(const vector<vector<string>>& content, const string& palabraAnterior, const string& nuevaPalabra) {
-    vector<vector<string>> modifiedContent = content;
+// Función para reemplazar una palabra por otra en el contenido del CSV
+vector<vector<string>> reemplazarPalabra(const vector<vector<string>>& contenido, const string& palabraAnterior, const string& nuevaPalabra) {
+    vector<vector<string>> contenidoModificado = contenido;
 
-    for (auto& row : modifiedContent) {
-        for (auto& cell : row) {
-            if (cell == palabraAnterior) {
-                cell = nuevaPalabra;
+    for (auto& fila : contenidoModificado) {
+        for (auto& celda : fila) {
+            if (celda == palabraAnterior) {
+                celda = nuevaPalabra;
             }
         }
     }
 
-    return modifiedContent;
+    return contenidoModificado;
 }
 
-// Función para extraer números de un CSV y convertirlos a tipo double
-vector<double> extractNumbers(const vector<vector<string>>& content) {
-    vector<double> numbers;
-    for (const auto& row : content) {
-        for (const auto& cell : row) {
-            try {
-                double num = stod(cell);
-                numbers.push_back(num);
-            } catch (...) {
-                // Ignorar las celdas que no sean números
+// Función para extraer números de las columnas seleccionadas y convertirlos a tipo double
+vector<double> extraerNumerosDeColumnas(const vector<vector<string>>& contenido, const vector<int>& columnas) {
+    vector<double> numeros;
+    for (const auto& fila : contenido) {
+        for (int col : columnas) {
+            // Verificar que la columna existe en la fila
+            if (col < fila.size()) {
+                try {
+                    double num = stod(fila[col]);
+                    numeros.push_back(num);
+                } catch (...) {
+                    // Ignorar las celdas que no sean números
+                }
             }
         }
     }
-    return numbers;
+    return numeros;
 }
 
 // Función para realizar una operación aritmética (suma en este caso)
-double performOperation(const vector<double>& numbers) {
-    if (numbers.empty()) {
-        cerr << "No se encontraron números en el archivo." << endl;
+double realizarOperacion(const vector<double>& numeros) {
+    if (numeros.empty()) {
+        cerr << "No se encontraron números en las columnas seleccionadas." << endl;
         return 0.0;
     }
-    return accumulate(numbers.begin(), numbers.end(), 0.0);
+    return accumulate(numeros.begin(), numeros.end(), 0.0);
 }
 
 int main() {
-    const string inputFile = "archivo.csv";
-    const string operationsFile = "operaciones.txt";
-    const string finalFile = "resultado.csv";
+    string nombreArchivoEntrada;
 
-    // 1. Leer el archivo CSV
-    vector<vector<string>> content = readCSV(inputFile);
+    // 1. Solicitar al usuario el nombre del archivo CSV
+    cout << "Introduce el nombre del archivo CSV con la extension (nombre.csv): ";
+    cin >> nombreArchivoEntrada;
+
+    // Verificar que el archivo tenga extensión .csv
+    if (nombreArchivoEntrada.substr(nombreArchivoEntrada.find_last_of('.') + 1) != "csv") {
+        cerr << "El archivo debe tener la extensión .csv" << endl;
+        return 1;
+    }
+
+    // Verificar si el archivo realmente existe
+    if (!fs::exists(nombreArchivoEntrada)) {
+        cerr << "El archivo '" << nombreArchivoEntrada << "' no se encuentra en el sistema." << endl;
+        return 1;
+    }
+
+    const string archivoOperaciones = "operaciones.txt";
+    const string archivoFinal = "resultado.csv";
+
+    // 2. Leer el archivo CSV
+    vector<vector<string>> contenido = leerCSV(nombreArchivoEntrada);
     cout << "Contenido del archivo CSV:\n";
-    for (const auto& row : content) {
-        for (const auto& cell : row) {
-            cout << cell << " ";
+    for (const auto& fila : contenido) {
+        for (const auto& celda : fila) {
+            cout << celda << " ";
         }
         cout << endl;
     }
 
-    // 2. Preguntar qué palabra buscar
-    string wordToFind;
-    cout << "\n¿Qué palabra deseas buscar? ";
-    cin >> wordToFind;
+    // 3. Contar una palabra específica en el archivo CSV
+    string palabraBuscar;
+    cout << "\n¿Qué palabra deseas buscar en el archivo? ";
+    cin >> palabraBuscar;
 
-    int occurrences = contadorPalabras(content, wordToFind);
-    cout << "La palabra '" << wordToFind << "' se encontró " << occurrences << " veces.\n";
+    int ocurrencias = contarPalabras(contenido, palabraBuscar);
+    cout << "La palabra '" << palabraBuscar << "' se encontró " << ocurrencias << " veces.\n";
 
-    // 3. Preguntar si se desea reemplazar la palabra
-    char replaceChoice;
+    // 4. Reemplazar una palabra por otra
+    char reemplazarEleccion;
     cout << "¿Deseas reemplazar esta palabra? (s/n): ";
-    cin >> replaceChoice;
+    cin >> reemplazarEleccion;
 
-    vector<vector<string>> modifiedContent = content;
-    if (replaceChoice == 's' || replaceChoice == 'S') {
+    vector<vector<string>> contenidoModificado = contenido;
+    if (reemplazarEleccion == 's' || reemplazarEleccion == 'S') {
         string nuevaPalabra;
-        cout << "¿Por qué palabra deseas reemplazar '" << wordToFind << "'? ";
+        cout << "¿Por qué palabra deseas reemplazar '" << palabraBuscar << "'? ";
         cin >> nuevaPalabra;
 
-        modifiedContent = remplazarPalabra(content, wordToFind, nuevaPalabra);
+        contenidoModificado = reemplazarPalabra(contenido, palabraBuscar, nuevaPalabra);
         cout << "\nContenido después de reemplazar:\n";
-        for (const auto& row : modifiedContent) {
-            for (const auto& cell : row) {
-                cout << cell << " ";
+        for (const auto& fila : contenidoModificado) {
+            for (const auto& celda : fila) {
+                cout << celda << " ";
             }
             cout << endl;
         }
     }
 
-    // 4. Extraer números y realizar una suma
-    vector<double> numbers = extractNumbers(modifiedContent);
-    double sum = performOperation(numbers);
-    cout << "La suma de los números es: " << sum << endl;
+    // 5. Preguntar qué columnas desea sumar
+    cout << "\nIntroduce las columnas que deseas sumar (separadas por espacio, comenzando desde 0): ";
+    string inputColumnas;
+    cin.ignore();  // Ignorar el salto de línea dejado por el cin anterior
+    getline(cin, inputColumnas); // Leer las columnas seleccionadas
+    stringstream ss(inputColumnas);
+    vector<int> columnasSeleccionadas;
+    int columna;
+    while (ss >> columna) {
+        columnasSeleccionadas.push_back(columna);
+    }
 
-    // 5. Guardar la suma en operaciones.txt
-    ofstream opFile(operationsFile);
-    opFile << "Suma de los números: " << sum << endl;
-    opFile.close();
+    // 6. Extraer números de las columnas seleccionadas y realizar la suma
+    vector<double> numeros = extraerNumerosDeColumnas(contenidoModificado, columnasSeleccionadas);
+    double suma = realizarOperacion(numeros);
+    cout << "La suma de los números en las columnas seleccionadas es: " << suma << endl;
 
-    // 6. Guardar el contenido modificado en resultado.csv
-    ofstream resultFile(finalFile);
-    for (const auto& row : modifiedContent) {
-        for (size_t i = 0; i < row.size(); ++i) {
-            resultFile << row[i];
-            if (i < row.size() - 1) {
-                resultFile << ",";  // Añadir la coma entre celdas
+    // 7. Guardar la suma en operaciones.txt
+    ofstream archivoOp(archivoOperaciones);
+    archivoOp << "Suma de las columnas seleccionadas: " << suma << endl;
+    archivoOp.close();
+
+    // 8. Guardar el contenido modificado en resultado.csv
+    ofstream archivoResultado(archivoFinal);
+    for (const auto& fila : contenidoModificado) {
+        for (size_t i = 0; i < fila.size(); ++i) {
+            archivoResultado << fila[i];
+            if (i < fila.size() - 1) {
+                archivoResultado << ",";  // Añadir la coma entre celdas
             }
         }
-        resultFile << endl;
+        archivoResultado << endl;
     }
-    resultFile.close();
+    archivoResultado.close();
 
-    cout << "\nProceso completado. Revisa los archivos generados: '" << operationsFile
-         << "' y '" << finalFile << "'." << endl;
+    cout << "\nProceso completado. Revisa los archivos generados: '" << archivoOperaciones
+         << "' y '" << archivoFinal << "'." << endl;
 
     return 0;
 }
