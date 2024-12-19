@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 # Función para leer el archivo .xlsx y extraer los datos en un DataFrame
 def leer_archivo(nombre_archivo):
     try:
@@ -13,7 +12,6 @@ def leer_archivo(nombre_archivo):
         return None
     return df
 
-
 # Función para contar las ocurrencias de una palabra en el DataFrame
 def contar_palabras(df, palabra):
     conteo = 0
@@ -21,27 +19,23 @@ def contar_palabras(df, palabra):
         conteo += df[columna].astype(str).str.contains(palabra, case=False, na=False).sum()
     return conteo
 
-
 # Función para reemplazar una palabra por otra en el DataFrame
 def reemplazar_palabra(df, palabra_antigua, palabra_nueva):
     for columna in df.columns:
         df[columna] = df[columna].astype(str).replace(palabra_antigua, palabra_nueva, regex=True)
     return df
 
-
 # Función para identificar columnas numéricas
 def obtener_columnas_numericas(df):
     columnas_numericas = df.select_dtypes(include=['number']).columns.tolist()
     return columnas_numericas
 
-
 # Función para sumar los valores de una columna seleccionada
 def sumar_columna(df, columna):
     return df[columna].sum()
 
-
 # Función para añadir datos al DataFrame
-def añadir_datos(df):
+def anadir_datos(df):
     while True:
         print("\nIntroduce los datos para las siguientes columnas:")
         nueva_fila = {}
@@ -55,7 +49,7 @@ def añadir_datos(df):
 
         confirmacion = input("\n¿Quieres guardar estos datos? (s/n/no estoy seguro): ").lower()
         if confirmacion == 's':
-            df = df.append(nueva_fila, ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([nueva_fila])], ignore_index=True)
             print("Datos guardados.")
         elif confirmacion == 'n':
             print("Datos descartados.")
@@ -69,11 +63,13 @@ def añadir_datos(df):
 
     return df
 
-
 # Función para guardar el contenido modificado en un archivo
 def guardar_archivo(df, nombre_archivo):
-    df.to_excel(nombre_archivo, index=False)
-
+    try:
+        df.to_excel(nombre_archivo, index=False)
+        print(f"Archivo guardado como '{nombre_archivo}'.")
+    except Exception as e:
+        print(f"Error al guardar el archivo: {e}")
 
 # Función principal
 def main():
@@ -100,9 +96,9 @@ def main():
     print(f"La palabra '{palabra_buscar}' se encontró {ocurrencias} veces.")
 
     # Preguntar si se desea reemplazar la palabra
-    reemplazar = input("¿Deseas reemplazar esta palabra? (s/n): ")
+    reemplazar = input("\u00bfDeseas reemplazar esta palabra? (s/n): ")
     if reemplazar.lower() == 's':
-        palabra_nueva = input(f"¿Por qué palabra deseas reemplazar '{palabra_buscar}'? ")
+        palabra_nueva = input(f"\u00bfPor qué palabra deseas reemplazar '{palabra_buscar}'? ")
         df = reemplazar_palabra(df, palabra_buscar, palabra_nueva)
         print("\nContenido después de reemplazar:")
         print(df)
@@ -129,15 +125,14 @@ def main():
             print("Entrada inválida. No se realizará ninguna suma.")
 
     # Preguntar si desea añadir más datos
-    añadir = input("\n¿Deseas añadir más datos al archivo? (s/n): ")
-    if añadir.lower() == 's':
-        df = añadir_datos(df)
+    anadir = input("\n¿Deseas añadir más datos al archivo? (s/n): ")
+    if anadir.lower() == 's':
+        df = anadir_datos(df)
 
     # Guardar el contenido modificado en un nuevo archivo
     nombre_archivo_salida = "resultado_modificado.xlsx"
     guardar_archivo(df, nombre_archivo_salida)
     print(f"\nProceso completado. El archivo modificado ha sido guardado como '{nombre_archivo_salida}'.")
-
 
 if __name__ == "__main__":
     main()
