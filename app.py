@@ -5,6 +5,9 @@ import pandas as pd
 def leer_archivo(nombre_archivo):
     try:
         df = pd.read_excel(nombre_archivo)
+    except FileNotFoundError:
+        print(f"Error: El archivo '{nombre_archivo}' no se encuentra.")
+        return None
     except Exception as e:
         print(f"Error al abrir el archivo: {e}")
         return None
@@ -15,7 +18,7 @@ def leer_archivo(nombre_archivo):
 def contar_palabras(df, palabra):
     conteo = 0
     for columna in df.columns:
-        conteo += df[columna].astype(str).str.contains(palabra, case=False).sum()
+        conteo += df[columna].astype(str).str.contains(palabra, case=False, na=False).sum()
     return conteo
 
 
@@ -26,24 +29,45 @@ def reemplazar_palabra(df, palabra_antigua, palabra_nueva):
     return df
 
 
-# Función para extraer los números de un DataFrame y convertirlos a tipo float
-def extraer_numeros(df):
-    numeros = []
-    for columna in df.columns:
-        for valor in df[columna]:
-            try:
-                numeros.append(float(valor))
-            except ValueError:
-                pass  # Ignorar valores no numéricos
-    return numeros
+# Función para identificar columnas numéricas
+def obtener_columnas_numericas(df):
+    columnas_numericas = df.select_dtypes(include=['number']).columns.tolist()
+    return columnas_numericas
 
 
-# Función para realizar una operación aritmética (por ejemplo, suma)
-def realizar_operacion(numeros):
-    if not numeros:
-        print("No se encontraron números en el archivo.")
-        return 0.0
-    return sum(numeros)
+# Función para sumar los valores de una columna seleccionada
+def sumar_columna(df, columna):
+    return df[columna].sum()
+
+
+# Función para añadir datos al DataFrame
+def añadir_datos(df):
+    while True:
+        print("\nIntroduce los datos para las siguientes columnas:")
+        nueva_fila = {}
+        for columna in df.columns:
+            valor = input(f"{columna}: ")
+            nueva_fila[columna] = valor
+
+        print("\nDatos ingresados:")
+        for columna, valor in nueva_fila.items():
+            print(f"{columna}: {valor}")
+
+        confirmacion = input("\n¿Quieres guardar estos datos? (s/n/no estoy seguro): ").lower()
+        if confirmacion == 's':
+            df = df.append(nueva_fila, ignore_index=True)
+            print("Datos guardados.")
+        elif confirmacion == 'n':
+            print("Datos descartados.")
+        elif confirmacion == "no estoy seguro":
+            print("Volviendo a llenar datos...")
+            continue
+
+        continuar = input("\n¿Quieres añadir otra fila? (s/n): ").lower()
+        if continuar != 's':
+            break
+
+    return df
 
 
 # Función para guardar el contenido modificado en un archivo
@@ -83,10 +107,31 @@ def main():
         print("\nContenido después de reemplazar:")
         print(df)
 
-    # Extraer los números y realizar una suma
-    numeros = extraer_numeros(df)
-    suma = realizar_operacion(numeros)
-    print(f"La suma de los números es: {suma}")
+    # Identificar columnas numéricas
+    columnas_numericas = obtener_columnas_numericas(df)
+    if not columnas_numericas:
+        print("No se encontraron columnas numéricas en el archivo.")
+    else:
+        print("\nColumnas numéricas disponibles para sumar:")
+        for i, columna in enumerate(columnas_numericas, 1):
+            print(f"{i}. {columna}")
+
+        # Preguntar al usuario cuál columna sumar
+        try:
+            opcion = int(input("Selecciona el número de la columna que deseas sumar: "))
+            if 1 <= opcion <= len(columnas_numericas):
+                columna_seleccionada = columnas_numericas[opcion - 1]
+                suma = sumar_columna(df, columna_seleccionada)
+                print(f"La suma de los valores en la columna '{columna_seleccionada}' es: {suma}")
+            else:
+                print("Opción inválida. No se realizará ninguna suma.")
+        except ValueError:
+            print("Entrada inválida. No se realizará ninguna suma.")
+
+    # Preguntar si desea añadir más datos
+    añadir = input("\n¿Deseas añadir más datos al archivo? (s/n): ")
+    if añadir.lower() == 's':
+        df = añadir_datos(df)
 
     # Guardar el contenido modificado en un nuevo archivo
     nombre_archivo_salida = "resultado_modificado.xlsx"
