@@ -24,28 +24,35 @@ from PyQt6.QtGui import QIcon, QPixmap
 class LoginWindow(QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Iniciar Sesion")
-        self.setWindowIcon(QIcon("icons/login.png"))  # Cambia "icon.png" por la ruta de tu icono
-        self.setGeometry(300, 300, 300, 250)  # Ajusté el tamaño para acomodar el logo
+        self.setWindowTitle("Iniciar Sesión")
+        self.setWindowIcon(QIcon("icons/login.png"))
+        self.setGeometry(500, 250, 400, 350)
+
+        # Cargar CSS externo
+        with open("style.css", "r") as file:
+            self.setStyleSheet(file.read())
 
         layout = QVBoxLayout()
 
-        # Agregar el logo
+        # Logo
         self.logo_label = QLabel(self)
-        pixmap = QPixmap("icons/logo.png")  # Cambia "logo.png" por la ruta de tu logo
-        self.logo_label.setPixmap(pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio))  # Escala el logo
-        self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Centra el logo
+        pixmap = QPixmap("icons/logo.png")
+        self.logo_label.setPixmap(pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.logo_label)
 
+        # Campos de entrada
         self.username_input = QLineEdit(self)
         self.username_input.setPlaceholderText("Usuario")
-        layout.addWidget(self.username_input)
 
         self.password_input = QLineEdit(self)
         self.password_input.setPlaceholderText("Contraseña")
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+        layout.addWidget(self.username_input)
         layout.addWidget(self.password_input)
 
+        # Botón de login
         self.login_button = QPushButton("Iniciar Sesión", self)
         self.login_button.clicked.connect(self.check_credentials)
         layout.addWidget(self.login_button)
@@ -53,13 +60,11 @@ class LoginWindow(QDialog):
         self.setLayout(layout)
 
     def check_credentials(self):
-        # Aquí puedes agregar la lógica para verificar las credenciales
         username = self.username_input.text()
         password = self.password_input.text()
 
-        # Ejemplo simple de validación (usuario: admin, contraseña: admin)
         if username == "admin" and password == "admin":
-            self.accept()  # Cierra la ventana de login y retorna QDialog.Accepted
+            self.accept()
         else:
             QMessageBox.warning(self, "Error", "Usuario o contraseña incorrectos")
 

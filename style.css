@@ -1,0 +1,105 @@
+/* Estilo para la ventana de Login */
+QDialog {
+    background-color: #f4f4f4;
+    border-radius: 12px;
+}
+
+/* Estilo para el logo */
+QLabel#logo_label {
+    margin-bottom: 15px;
+}
+
+/* Campos de entrada (usuario y contraseña) */
+QLineEdit {
+    background-color: white;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 16px;
+    color: black;
+}
+
+/* Cambiar el borde cuando está seleccionado */
+QLineEdit:focus {
+    border: 2px solid #0078D7;
+}
+
+/* Botón de iniciar sesión */
+QPushButton {
+    background-color: #0078D7;
+    color: white;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+}
+
+QPushButton:hover {
+    background-color: #005A9E;
+}
+
+QPushButton:pressed {
+    background-color: #004080;
+}
+
+/* Estilo para la ventana principal */
+QMainWindow {
+    background-color: #ffffff;
+}
+
+/* Estilo para los botones del menú lateral */
+QPushButton#menu_button {
+    background-color: #0078D7;
+    color: white;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    border: none;
+    margin: 5px 10px;
+}
+
+QPushButton#menu_button:hover {
+    background-color: #005A9E;
+}
+
+QPushButton#menu_button:pressed {
+    background-color: #004080;
+}
+
+/* Estilo para la tabla de datos */
+QTableWidget {
+    border: 1px solid #ccc;
+    gridline-color: #ccc;
+}
+
+QHeaderView::section {
+    background-color: #0078D7;
+    color: white;
+    padding: 5px;
+    border: none;
+    font-size: 14px;
+}
+
+QTableWidget::item {
+    padding: 5px;
+    font-size: 13px;
+}
+
+/* Scrollbars */
+QScrollBar:vertical {
+    background: #e0e0e0;
+    width: 12px;
+    margin: 0px 3px 0px 3px;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical {
+    background: #0078D7;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #005A9E;
+}
