@@ -1,9 +1,6 @@
-# Agrega esto AL PRINCIPIO de tu código (antes de cualquier import de matplotlib)
 import matplotlib
-
 matplotlib.use('QtAgg')
 
-# Luego tus imports normales
 import sys
 from PyQt6 import QtWidgets, QtCore
 import pandas as pd
@@ -19,8 +16,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
 
-
-# Nueva clase para la ventana de login
+# Ventana de login
 class LoginWindow(QDialog):
     def __init__(self):
         super().__init__()
@@ -28,13 +24,13 @@ class LoginWindow(QDialog):
         self.setWindowIcon(QIcon("icons/login.png"))
         self.setGeometry(500, 250, 400, 350)
 
-        # Cargar CSS externo
+        # CSS
         with open("style.css", "r") as file:
             self.setStyleSheet(file.read())
 
         layout = QVBoxLayout()
 
-        # Logo
+        # Logo de Login
         self.logo_label = QLabel(self)
         pixmap = QPixmap("icons/logo.png")
         self.logo_label.setPixmap(pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
@@ -154,7 +150,7 @@ class DataAnalysisApp(QMainWindow):
         self.setCentralWidget(self.central_widget)
         main_layout = QHBoxLayout(self.central_widget)
 
-        # **Panel izquierdo más ancho y responsivo**
+        # Panel izquierdo
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
 
@@ -162,8 +158,8 @@ class DataAnalysisApp(QMainWindow):
         left_panel.setMaximumWidth(400)  # Ancho máximo para evitar que crezca demasiado
         left_panel.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding, QtWidgets.QSizePolicy.Policy.Expanding)
 
-        # **Botones más grandes**
-        button_size = QtCore.QSize(220, 50)  # Tamaño uniforme para los botones
+        # Tamaño de botones
+        button_size = QtCore.QSize(220, 50)
 
         self.load_button = QPushButton("Cargar Datos")
         self.load_button.setIcon(QIcon("icons/load.png"))
@@ -186,7 +182,7 @@ class DataAnalysisApp(QMainWindow):
         self.back_button.setMinimumSize(button_size)
         self.back_button.setVisible(False)
 
-        # **Alinear los botones al centro y distribuir espacio proporcionalmente**
+        # Alinear botones al centro
         left_layout.addStretch()
         left_layout.addWidget(self.load_button, alignment=Qt.AlignmentFlag.AlignCenter)
         left_layout.addWidget(self.analysis_button, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -195,7 +191,7 @@ class DataAnalysisApp(QMainWindow):
         left_layout.addWidget(self.back_button, alignment=Qt.AlignmentFlag.AlignCenter)
         left_layout.addStretch()
 
-        # **Hacer que el contenido principal sea flexible**
+        # Contenido responsivo
         self.stacked_widget = QStackedWidget()
         self.table_widget = QTableWidget()
         self.graph_widget = GraphWidget()
@@ -203,11 +199,11 @@ class DataAnalysisApp(QMainWindow):
         self.stacked_widget.addWidget(self.table_widget)
         self.stacked_widget.addWidget(self.graph_widget)
 
-        # **Agregar los elementos al layout principal**
-        main_layout.addWidget(left_panel, 2)  # Menú ocupa 2 partes
-        main_layout.addWidget(self.stacked_widget, 5)  # Contenido ocupa 5 partes
+        # Agregar al layout principal
+        main_layout.addWidget(left_panel, 2)
+        main_layout.addWidget(self.stacked_widget, 5)
 
-        # **Conexiones**
+        # Conexiones
         self.load_button.clicked.connect(self.load_data)
         self.analysis_button.clicked.connect(self.show_analysis)
         self.graph_button.clicked.connect(self.generate_graph)
