@@ -1,105 +1,66 @@
-/* Estilo para la ventana de Login */
-QDialog {
-    background-color: #f4f4f4;
-    border-radius: 12px;
-}
-
-/* Estilo para el logo */
-QLabel#logo_label {
-    margin-bottom: 15px;
-}
-
-/* Campos de entrada (usuario y contraseña) */
+/* === Correcciones para inputs === */
 QLineEdit {
-    background-color: white;
-    border: 2px solid #ccc;
-    border-radius: 8px;
-    padding: 8px;
-    font-size: 16px;
-    color: black;
+    padding: 12px 15px;          /* Espacio interno aumentado */
+    border: 2px solid #4d4d4d;
+    border-radius: 6px;
+    font-size: 14px;             /* Tamaño de fuente aumentado */
+    color: #ffffff;              /* Texto en blanco */
+    background-color: #333333;
+    min-width: 300px;            /* Ancho mínimo aumentado */
+    min-height: 40px;            /* Altura mínima */
 }
 
-/* Cambiar el borde cuando está seleccionado */
-QLineEdit:focus {
-    border: 2px solid #0078D7;
-}
-
-/* Botón de iniciar sesión */
-QPushButton {
-    background-color: #0078D7;
-    color: white;
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 16px;
-    font-weight: bold;
-    border: none;
-}
-
-QPushButton:hover {
-    background-color: #005A9E;
-}
-
-QPushButton:pressed {
-    background-color: #004080;
-}
-
-/* Estilo para la ventana principal */
-QMainWindow {
-    background-color: #ffffff;
-}
-
-/* Estilo para los botones del menú lateral */
-QPushButton#menu_button {
-    background-color: #0078D7;
-    color: white;
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 14px;
-    font-weight: bold;
-    border: none;
-    margin: 5px 10px;
-}
-
-QPushButton#menu_button:hover {
-    background-color: #005A9E;
-}
-
-QPushButton#menu_button:pressed {
-    background-color: #004080;
-}
-
-/* Estilo para la tabla de datos */
-QTableWidget {
-    border: 1px solid #ccc;
-    gridline-color: #ccc;
-}
-
-QHeaderView::section {
-    background-color: #0078D7;
-    color: white;
-    padding: 5px;
-    border: none;
-    font-size: 14px;
-}
-
-QTableWidget::item {
-    padding: 5px;
+/* Placeholder visible */
+QLineEdit::placeholder {
+    color: #858585;              /* Color gris medio */
     font-size: 13px;
 }
 
-/* Scrollbars */
-QScrollBar:vertical {
-    background: #e0e0e0;
-    width: 12px;
-    margin: 0px 3px 0px 3px;
-    border-radius: 6px;
+/* Ajustes específicos para diálogos */
+AddDataDialog QLineEdit,
+SearchReplaceDialog QLineEdit {
+    min-width: 350px;            /* Ancho aumentado para diálogos */
+    padding: 15px 20px;          /* Más padding */
 }
 
-QScrollBar::handle:vertical {
-    background: #0078D7;
-    border-radius: 6px;
+/* === Ajustes de tamaño general === */
+QDialog {
+    min-width: 500px;            /* Ancho mínimo para ventanas */
+    min-height: 300px;           /* Altura mínima */
 }
 
-QScrollBar::handle:vertical:hover {
-    background: #005A9E;
+QMainWindow {
+    min-width: 800px;            /* Tamaño mínimo ventana principal */
+    min-height: 600px;
+}
+
+/* === Corrección de texto en tablas === */
+QTableWidget::item {
+    color: #e0e0e0;              /* Asegurar color de texto */
+    padding: 8px;                /* Más espacio en celdas */
+}
+
+/* === Botones y comboboxes === */
+QPushButton {
+    min-width: 120px;            /* Ancho mínimo para botones */
+    padding: 10px 20px;          /* Más espacio interno */
+}
+
+QComboBox {
+    min-width: 200px;
+    padding: 10px;
+}
+/* Añade estos estilos para los ComboBox */
+QComboBox {
+    background-color: #333333;
+    color: white;
+    border: 1px solid #4d4d4d;
+    padding: 8px;
+    selection-background-color: #2aa198;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #333333;
+    color: white;
+    selection-background-color: #2aa198;
 }
