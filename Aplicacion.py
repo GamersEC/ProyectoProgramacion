@@ -6,6 +6,7 @@ import sys
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import re
 from PyQt6 import QtWidgets, QtCore
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
@@ -296,8 +297,17 @@ class DataAnalysisApp(QMainWindow):
 
     def setup_sidebar(self, main_layout):
         left_panel = QWidget()
-        left_layout = QVBoxLayout(left_panel)
         left_panel.setMinimumWidth(250)
+
+        # Layout principal del panel izquierdo
+        left_main_layout = QVBoxLayout(left_panel)
+        left_main_layout.setContentsMargins(10, 10, 10, 10)
+
+        # Widget contenedor para los botones (centrado verticalmente)
+        button_container = QWidget()
+        button_layout = QVBoxLayout(button_container)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(15)
 
         buttons = [
             ("Cargar Datos", "icons/load.png", self.load_data),
@@ -312,12 +322,20 @@ class DataAnalysisApp(QMainWindow):
         for text, icon, handler in buttons:
             btn = QPushButton(text)
             btn.setIcon(QIcon(icon))
-            btn.setMinimumSize(220, 50)
+            btn.setMinimumSize(200, 45)
+            btn.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed
+            )
             btn.clicked.connect(handler)
-            left_layout.addWidget(btn, alignment=Qt.AlignmentFlag.AlignCenter)
+            button_layout.addWidget(btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        left_layout.addStretch()
-        main_layout.addWidget(left_panel, 2)
+        # Añadir el contenedor de botones centrado verticalmente
+        left_main_layout.addStretch()
+        left_main_layout.addWidget(button_container, alignment=Qt.AlignmentFlag.AlignCenter)
+        left_main_layout.addStretch()
+
+        main_layout.addWidget(left_panel)
 
     def setup_main_content(self, main_layout):
         self.stacked_widget = QStackedWidget()
@@ -375,17 +393,29 @@ class DataAnalysisApp(QMainWindow):
                 try:
                     search = dialog.search_input.text()
                     replace = dialog.replace_input.text()
-                    case = dialog.case_checkbox.isChecked()
+                    case_sensitive = dialog.case_checkbox.isChecked()
 
-                    self.data.replace(
-                        to_replace=search,
-                        value=replace,
-                        regex=False,
-                        case=case,
-                        inplace=True
-                    )
+                    # Solución compatible con todas las versiones de pandas
+                    if case_sensitive:
+                        # Búsqueda exacta
+                        self.data.replace(
+                            to_replace=search,
+                            value=replace,
+                            regex=False,
+                            inplace=True
+                        )
+                    else:
+                        # Búsqueda insensible con regex
+                        self.data.replace(
+                            to_replace=re.compile(re.escape(search), re.IGNORECASE),
+                            value=replace,
+                            regex=True,
+                            inplace=True
+                        )
+
                     self.populate_table()
                     QMessageBox.information(self, "Éxito", "Reemplazo completado")
+
                 except Exception as e:
                     self.show_error(str(e))
 
