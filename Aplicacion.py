@@ -1,4 +1,3 @@
-
 import matplotlib
 matplotlib.use('QtAgg')
 
@@ -7,6 +6,9 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import re
+import os  # Importar módulo os
+import tempfile
+from PyQt6.QtWidgets import QDialogButtonBox
 from PyQt6 import QtWidgets, QtCore
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
@@ -29,8 +31,19 @@ class LoginWindow(QDialog):
         self.setWindowIcon(QIcon("icons/login.png"))
         self.setMinimumSize(400, 500)
         self.attempts = 0
+        self.users_file = "users.xlsx"
+        self.initialize_users_file()  # Inicializar archivo de usuarios
         self.setup_ui()
         self.center_window()
+
+    def initialize_users_file(self):
+        """Crea el archivo de usuarios si no existe"""
+        if not os.path.exists(self.users_file):
+            df = pd.DataFrame({
+                "Username": ["admin"],
+                "Password": ["admin"]
+            })
+            df.to_excel(self.users_file, index=False)
 
     def center_window(self):
         qr = self.frameGeometry()
@@ -81,10 +94,17 @@ class LoginWindow(QDialog):
         form_layout.addRow("Usuario:", self.username_input)
         form_layout.addRow("Contraseña:", self.password_input)
 
-        # Botón de login
-        self.login_button = QPushButton("Ingresar al Sistema")
+        # Botones de login y registro
+        button_layout = QHBoxLayout()
+        self.login_button = QPushButton("Ingresar")
         self.login_button.setObjectName("loginButton")
         self.login_button.clicked.connect(self.check_credentials)
+
+        self.register_button = QPushButton("Registrarse")
+        self.register_button.clicked.connect(self.register_user)
+
+        button_layout.addWidget(self.login_button)
+        button_layout.addWidget(self.register_button)
 
         # Pie de página
         footer = QLabel(
@@ -99,13 +119,45 @@ class LoginWindow(QDialog):
         container_layout.addWidget(self.logo_label)
         container_layout.addWidget(title)
         container_layout.addWidget(input_frame)
-        container_layout.addWidget(self.login_button)
+        container_layout.addLayout(button_layout)
         container_layout.addStretch()
 
         main_layout.addWidget(container)
         main_layout.addWidget(footer, alignment=Qt.AlignmentFlag.AlignBottom)
 
+    def register_user(self):
+        """Maneja el registro de nuevos usuarios"""
+        username = self.username_input.text()
+        password = self.password_input.text()
+
+        if not username or not password:
+            QMessageBox.warning(self, "Error", "Usuario y contraseña son obligatorios")
+            return
+
+        try:
+            # Cargar usuarios existentes
+            df = pd.read_excel(self.users_file)
+        except FileNotFoundError:
+            df = pd.DataFrame(columns=["Username", "Password"])
+
+        # Verificar si el usuario ya existe
+        if username in df["Username"].values:
+            QMessageBox.warning(self, "Error", "El usuario ya existe")
+            return
+
+        # Añadir nuevo usuario
+        new_user = pd.DataFrame([[username, password]], columns=["Username", "Password"])
+        df = pd.concat([df, new_user], ignore_index=True)
+        df.to_excel(self.users_file, index=False)
+
+        QMessageBox.information(
+            self,
+            "Registro exitoso",
+            "Usuario registrado correctamente"
+        )
+
     def check_credentials(self):
+        """Valida las credenciales contra el archivo Excel"""
         if self.attempts >= 3:
             QMessageBox.critical(self, "Bloqueado", "Demasiados intentos fallidos")
             self.reject()
@@ -114,7 +166,16 @@ class LoginWindow(QDialog):
         username = self.username_input.text()
         password = self.password_input.text()
 
-        if username == "admin" and password == "admin":
+        try:
+            df = pd.read_excel(self.users_file)
+        except FileNotFoundError:
+            QMessageBox.critical(self, "Error", "Base de datos de usuarios no encontrada")
+            return
+
+        # Buscar coincidencias
+        valid_user = df[(df["Username"] == username) & (df["Password"] == password)]
+
+        if not valid_user.empty:
             self.accept()
         else:
             self.attempts += 1
@@ -124,6 +185,7 @@ class LoginWindow(QDialog):
                 "Error",
                 f"Credenciales incorrectas\nIntentos restantes: {remaining}"
             )
+
 
 class DataLoaderThread(QThread):
     loaded = pyqtSignal(pd.DataFrame)
@@ -349,6 +411,96 @@ class AnalysisWindow(QDialog):
         scroll.setWidgetResizable(True)
         layout.addWidget(scroll)
 
+class SearchDialog(QDialog):
+    def __init__(self, data, parent=None):
+        super().__init__(parent)
+        self.data = data
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.setWindowTitle("Buscar")
+        self.setFixedSize(400, 200)
+
+        layout = QVBoxLayout(self)
+        form_layout = QFormLayout()
+
+        self.search_input = QLineEdit()
+        self.case_checkbox = QCheckBox("Coincidir mayúsculas/minúsculas")
+        self.replace_checkbox = QCheckBox("Habilitar reemplazo")
+
+        form_layout.addRow("Buscar:", self.search_input)
+        form_layout.addRow(self.case_checkbox)
+        form_layout.addRow(self.replace_checkbox)
+
+        self.search_btn = QPushButton("Buscar")
+        self.replace_btn = QPushButton("Reemplazar")
+        self.replace_btn.setEnabled(False)
+
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.search_btn)
+        button_layout.addWidget(self.replace_btn)
+
+        layout.addLayout(form_layout)
+        layout.addLayout(button_layout)
+
+        # Conexiones
+        self.replace_checkbox.toggled.connect(self.replace_btn.setEnabled)
+        self.search_btn.clicked.connect(self.find_matches)
+        self.replace_btn.clicked.connect(self.open_replace_dialog)
+
+    def find_matches(self):
+        search_text = self.search_input.text()
+        case_sensitive = self.case_checkbox.isChecked()
+
+        if not search_text:
+            QMessageBox.warning(self, "Advertencia", "Ingrese un texto a buscar")
+            return
+
+        try:
+            if case_sensitive:
+                matches = self.data.apply(lambda col: col.astype(str).str.contains(search_text)).sum().sum()
+            else:
+                matches = self.data.apply(lambda col: col.astype(str).str.contains(search_text, case=False)).sum().sum()
+
+            QMessageBox.information(
+                self,
+                "Resultados de búsqueda",
+                f"Se encontraron {matches} coincidencias de '{search_text}'"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error en búsqueda: {str(e)}")
+
+    def open_replace_dialog(self):
+        self.replace_dialog = ReplaceDialog(self)
+        if self.replace_dialog.exec():
+            replace_text = self.replace_dialog.replace_input.text()
+            self.parent().perform_replace(
+                self.search_input.text(),
+                replace_text,
+                self.case_checkbox.isChecked()
+            )
+
+class ReplaceDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.setWindowTitle("Reemplazar")
+        self.setFixedSize(300, 150)
+
+        layout = QVBoxLayout(self)
+        form_layout = QFormLayout()
+
+        self.replace_input = QLineEdit()
+        form_layout.addRow("Reemplazar con:", self.replace_input)
+
+        self.replace_btn = QPushButton("Reemplazar")
+        self.replace_btn.clicked.connect(self.accept)
+
+        layout.addLayout(form_layout)
+        layout.addWidget(self.replace_btn)
+
 class GraphWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -395,14 +547,57 @@ class GraphWidget(QWidget):
             self.y_selector.setEnabled(True)
         self.parent().update_graph()
 
+class EditDialog(QDialog):
+    def __init__(self, columns, data, parent=None):
+        super().__init__(parent)
+        self.columns = columns
+        self.data = data
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.setWindowTitle("Editar Registro")
+        self.setFixedSize(450, 550)
+
+        layout = QVBoxLayout(self)
+        self.inputs = {}
+
+        for col in self.columns:
+            self.inputs[col] = QLineEdit(str(self.data[col]))
+            layout.addWidget(QLabel(col))
+            layout.addWidget(self.inputs[col])
+
+        self.save_btn = QPushButton("Guardar Cambios")
+        self.save_btn.clicked.connect(self.accept)
+        layout.addWidget(self.save_btn)
+
 class DataAnalysisApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.data = None
+        self.data = pd.DataFrame()  # DataFrame vacío por defecto
         self.current_file = None
         self.thread = None
         self.graph_widget = None
         self.setup_ui()
+
+    # En la clase DataAnalysisApp:
+    def new_document(self):
+        """Crea un nuevo documento con la estructura base requerida"""
+        columns = [
+            "Nombre", "Apellido", "Edad", "Sexo",
+            "Saturación_Oxígeno", "Presión_Arterial",
+            "Pulso", "Temperatura", "IMC"
+        ]
+
+        self.data = pd.DataFrame(columns=columns)
+        self.current_file = None  # Reinicia la ruta actual
+        self.populate_table()
+
+        QMessageBox.information(
+            self,
+            "Nuevo Documento",
+            "Documento vacío creado con las columnas requeridas.\n"
+            "Use el botón 'Añadir Datos' para ingresar registros."
+        )
 
     def setup_ui(self):
         self.setWindowTitle("App de Análisis de Datos")
@@ -431,7 +626,9 @@ class DataAnalysisApp(QMainWindow):
         button_layout.setSpacing(15)
 
         buttons = [
+            ("Nuevo Documento", "icons/new.png", self.new_document),  # Nuevo botón
             ("Cargar Datos", "icons/load.png", self.load_data),
+            ("Editar Datos", "icons/edit.png", self.edit_data),
             ("Buscar/Reemplazar", "icons/search.png", self.search_replace),
             ("Añadir Datos", "icons/add.png", self.add_data),
             ("Análisis Básico", "icons/analysis.png", self.show_basic_analysis),
@@ -498,58 +695,105 @@ class DataAnalysisApp(QMainWindow):
             self.table_widget.setRowCount(0)
             self.table_widget.setColumnCount(0)
 
-            self.table_widget.setRowCount(len(self.data))
+            # Configurar columnas incluso si el DataFrame está vacío
             self.table_widget.setColumnCount(len(self.data.columns))
             self.table_widget.setHorizontalHeaderLabels(self.data.columns.tolist())
 
-            for row_idx, row in self.data.iterrows():
-                for col_idx, value in enumerate(row):
-                    item = QTableWidgetItem(str(value))
-                    self.table_widget.setItem(row_idx, col_idx, item)
+            # Llenar datos si existen
+            if not self.data.empty:
+                self.table_widget.setRowCount(len(self.data))
+                for row_idx, row in self.data.iterrows():
+                    for col_idx, value in enumerate(row):
+                        item = QTableWidgetItem(str(value))
+                        self.table_widget.setItem(row_idx, col_idx, item)
 
     def search_replace(self):
-        if self.data is not None:
-            dialog = SearchReplaceDialog(self)
+        if self.data is None:
+            QMessageBox.warning(self, "Advertencia", "Primero cargue un conjunto de datos")
+            return
+
+        dialog = SearchDialog(self.data, self)
+        if dialog.exec():
+            # La lógica de reemplazo se maneja desde el diálogo
+            pass
+
+    def perform_replace(self, search_text, replace_text, case_sensitive):
+        try:
+            if case_sensitive:
+                self.data.replace(
+                    to_replace=search_text,
+                    value=replace_text,
+                    regex=False,
+                    inplace=True
+                )
+            else:
+                self.data.replace(
+                    to_replace=re.compile(re.escape(search_text), re.IGNORECASE),
+                    value=replace_text,
+                    regex=True,
+                    inplace=True
+                )
+
+            self.populate_table()
+            QMessageBox.information(
+                self,
+                "Éxito",
+                f"Reemplazo completado: '{search_text}' → '{replace_text}'"
+            )
+        except Exception as e:
+            self.show_error(str(e))
+
+    def edit_data(self):
+        if self.data is None or self.data.empty:
+            QMessageBox.warning(self, "Advertencia", "No hay datos para editar")
+            return
+
+        selected_row = self.table_widget.currentRow()
+        if selected_row == -1:
+            QMessageBox.warning(self, "Advertencia", "Seleccione un registro para editar")
+            return
+
+        try:
+            # Obtener datos actuales
+            row_data = self.data.iloc[selected_row].to_dict()
+
+            # Mostrar diálogo de edición
+            dialog = EditDialog(self.data.columns.tolist(), row_data, self)
             if dialog.exec() == QDialog.DialogCode.Accepted:
-                try:
-                    search = dialog.search_input.text()
-                    replace = dialog.replace_input.text()
-                    case_sensitive = dialog.case_checkbox.isChecked()
+                # Actualizar datos
+                new_data = {col: dialog.inputs[col].text() for col in self.data.columns}
+                self.data.loc[selected_row] = new_data
 
-                    # Solución compatible con todas las versiones de pandas
-                    if case_sensitive:
-                        # Búsqueda exacta
-                        self.data.replace(
-                            to_replace=search,
-                            value=replace,
-                            regex=False,
-                            inplace=True
-                        )
-                    else:
-                        # Búsqueda insensible con regex
-                        self.data.replace(
-                            to_replace=re.compile(re.escape(search), re.IGNORECASE),
-                            value=replace,
-                            regex=True,
-                            inplace=True
-                        )
+                # Actualizar tabla
+                for col_idx, col in enumerate(self.data.columns):
+                    self.table_widget.item(selected_row, col_idx).setText(new_data[col])
 
-                    self.populate_table()
-                    QMessageBox.information(self, "Éxito", "Reemplazo completado")
+                QMessageBox.information(self, "Éxito", "Registro actualizado correctamente")
 
-                except Exception as e:
-                    self.show_error(str(e))
+        except Exception as e:
+            self.show_error(str(e))
 
     def add_data(self):
         if self.data is not None:
             dialog = AddDataDialog(self.data.columns.tolist(), self)
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 try:
-                    new_row = {col: dialog.inputs[col].text() for col in self.data.columns}
-                    new_df = pd.DataFrame([new_row])
-                    self.data = pd.concat([self.data, new_df], ignore_index=True)
+                    new_row = {}
+                    for col in self.data.columns:
+                        value = dialog.inputs[col].text()
+                        # Conversión automática de tipos de datos
+                        if col in ["Edad", "Saturación_Oxígeno", "Pulso", "Temperatura", "IMC"]:
+                            new_row[col] = float(value) if '.' in value else int(value)
+                        elif col == "Presión_Arterial":
+                            new_row[col] = value  # Mantener como string
+                        else:
+                            new_row[col] = value
+
+                    self.data = pd.concat([self.data, pd.DataFrame([new_row])], ignore_index=True)
                     self.populate_table()
                     QMessageBox.information(self, "Éxito", "Registro añadido exitosamente")
+                except ValueError as ve:
+                    self.show_error(f"Error de formato: {str(ve)}")
                 except Exception as e:
                     self.show_error(str(e))
 
@@ -783,7 +1027,6 @@ class DataAnalysisApp(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    # Cargar CSS con manejo de errores
     try:
         with open("Styles/style.css", "r", encoding="utf-8") as f:
             app.setStyleSheet(f.read())

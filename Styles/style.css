@@ -187,3 +187,30 @@ QLineEdit:focus, QComboBox:open {
     border-color: $color-primario;
     background-color: rgba(0, 0, 0, 0.2);
 }
+/* Agrega esto en tu archivo CSS */
+QDialog {
+    background-color: #f0f0f0;
+    font-family: 'Segoe UI', Arial;
+}
+
+QLineEdit {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+
+QCheckBox {
+    spacing: 5px;
+}
+
+QPushButton {
+    padding: 8px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+}
+
+QPushButton:hover {
+    background-color: #45a049;
+}
