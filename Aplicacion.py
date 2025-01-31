@@ -31,7 +31,7 @@ class LoginWindow(QDialog):
         self.setWindowIcon(QIcon("icons/login.png"))
         self.setMinimumSize(400, 500)
         self.attempts = 0
-        self.users_file = "users.xlsx"
+        self.users_file = "data/users.xlsx"
         self.initialize_users_file()  # Inicializar archivo de usuarios
         self.setup_ui()
         self.center_window()
@@ -264,7 +264,7 @@ class AnalysisWindow(QDialog):
 
     def load_styles(self):
         try:
-            with open("analysis_style.css", "r", encoding="utf-8") as f:
+            with open("Styles/analysis_style.css", "r", encoding="utf-8") as f:
                 self.setStyleSheet(f.read())
         except Exception as e:
             print(f"Error loading styles: {str(e)}")
