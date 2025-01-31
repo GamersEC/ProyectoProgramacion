@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 import matplotlib
 matplotlib.use('QtAgg')
 
@@ -370,7 +370,7 @@ class GraphWidget(QWidget):
         self.x_selector = QComboBox()
         self.y_selector = QComboBox()
         self.graph_type = QComboBox()
-        self.graph_type.addItems(["Líneas", "Barras", "Dispersión", "Histograma", "Boxplot"])
+        self.graph_type.addItems(["Líneas"])
 
         control_layout.addWidget(QLabel("Eje X:"))
         control_layout.addWidget(self.x_selector)
@@ -785,7 +785,7 @@ if __name__ == "__main__":
 
     # Cargar CSS con manejo de errores
     try:
-        with open("style.css", "r", encoding="utf-8") as f:
+        with open("Styles/style.css", "r", encoding="utf-8") as f:
             app.setStyleSheet(f.read())
     except Exception as e:
         print(f"Error al cargar CSS: {str(e)}")

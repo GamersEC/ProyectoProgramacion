@@ -8,6 +8,9 @@ $color-borde: #3a4555;
 $color-primario: #8ab4f8;
 $color-texto: #d3dae3;
 $color-destacado: #ffd700;
+$color-numero: #98f598;
+$color-alerta: #ff9494;
+$color-normal: #89f5a2;
 
 /* ------------------------------- */
 /* COMPONENTES PRINCIPALES */
@@ -18,6 +21,12 @@ QMainWindow, QDialog {
     color: $color-texto;
     font-family: 'Segoe UI';
     font-size: 14px;
+}
+
+QScrollArea {
+    background: transparent;
+    border: none;
+    padding: 10px;
 }
 
 /* --- Inputs --- */
@@ -123,19 +132,52 @@ QLabel {
     background-color: rgba(255, 255, 255, 0.03);
 }
 
+/* Totales */
+QLabel[text*="Total de pacientes"] {
+    color: $color-destacado !important;
+    font-weight: 500;
+    border-bottom: 1px solid $color-borde;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    font-size: 15px !important;
+}
+
+/* Líneas de género */
+QLabel[text*="Masculino"],
+QLabel[text*="Femenino"],
+QLabel[text*="Otros/No especificado"] {
+    color: lighten($color-primario, 20%) !important;
+    font-family: 'Segoe UI Semilight';
+    padding-left: 35px !important;
+    background-color: rgba(198, 208, 253, 0.05) !important;
+}
+
+/* Porcentajes */
+QLabel[text*="%"] {
+    font-size: 12.5px;
+    color: #a8a8a8 !important;
+    font-style: italic;
+    display: inline !important;
+}
+
 /* Destacados numéricos */
 QLabel[text*=":"] {
-    color: #98f598 !important;
+    color: $color-numero !important;
     font-family: 'Consolas';
     font-size: 13.5px;
 }
 
 /* Clasificaciones especiales */
 QLabel[text*="Clasificación"] { color: #89d3ff !important; }
-QLabel[text*="⚠"] { color: #ff9494 !important; }
-QLabel[text*="Normal"] { color: #89f5a2 !important; }
+QLabel[text*="⚠"] { color: $color-alerta !important; }
+QLabel[text*="Normal"] { color: $color-normal !important; }
 
-/* Efectos de interactividad */
+/* Interactividad */
+QLabel:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: background 0.3s ease;
+}
+
 QLineEdit:hover, QComboBox:hover, QPushButton:hover {
     border-color: lighten($color-borde, 10%);
     transition: all 0.3s ease;
