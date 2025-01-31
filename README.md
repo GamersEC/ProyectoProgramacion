@@ -42,10 +42,3 @@
 - **Estilos**: CSS personalizado para interfaz moderna.
 
 ---
-
-## Instalación
-
-1. **Clonar el repositorio**:
-   ```bash
-   git clone https://github.com/tu-usuario/deep-health.git
-   cd deep-health
