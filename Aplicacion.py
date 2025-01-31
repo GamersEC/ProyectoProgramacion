@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QLabel, QFileDialog, QMessageBox,
     QStackedWidget, QDialog, QComboBox, QFormLayout, QScrollArea, QLineEdit,
-    QFrame, QSizePolicy, QTabWidget, QCheckBox
+    QFrame, QSizePolicy, QTabWidget, QCheckBox, QHeaderView
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
@@ -198,9 +198,100 @@ class AnalysisWindow(QDialog):
         super().__init__(parent)
         self.data = data
         self.setup_ui()
+        self.load_styles()
+
+    def load_styles(self):
+        try:
+            with open("analysis_style.css", "r", encoding="utf-8") as f:
+                self.setStyleSheet(f.read())
+        except Exception as e:
+            print(f"Error loading styles: {str(e)}")
+
+    def detect_age_column(self):
+        age_keywords = r'\b(edad|age)\b'
+        numeric_cols = self.data.select_dtypes(include=np.number).columns
+        for col in numeric_cols:
+            if re.search(age_keywords, col, re.IGNORECASE):
+                return col
+        return None
+
+    def is_medical_indicator(self, col):
+        medical_keywords = r'\b(saturación|oxígeno|presión|arterial|pulso|temperatura|imc)\b'
+        return re.search(medical_keywords, col, re.IGNORECASE)
+
+    def analyze_vital_signs(self, col, scroll_layout):
+        try:
+            if "saturación" in col.lower():
+                avg = self.data[col].mean()
+                status = "Normal (95-100%)" if 95 <= avg <= 100 else "⚠️ Anormal"
+                stats = [
+                    f"• {col}:",
+                    f"  - Promedio: {avg:.1f}%",
+                    f"  - Estado: {status}"
+                ]
+
+            elif "presión" in col.lower():
+                systolic = self.data[col].str.split('/').str[0].astype(float).mean()
+                diastolic = self.data[col].str.split('/').str[1].astype(float).mean()
+                stats = [
+                    f"• {col}:",
+                    f"  - Promedio sistólica: {systolic:.1f} mmHg",
+                    f"  - Promedio diastólica: {diastolic:.1f} mmHg",
+                    f"  - Clasificación: {self.classify_blood_pressure(systolic, diastolic)}"
+                ]
+
+            elif "pulso" in col.lower():
+                avg = self.data[col].mean()
+                stats = [
+                    f"• {col}:",
+                    f"  - Promedio: {avg:.1f} lpm",
+                    f"  - Rango normal: 60-100 lpm"
+                ]
+
+            elif "temperatura" in col.lower():
+                avg = self.data[col].mean()
+                fever = "⚠️ Fiebre" if avg > 37.5 else "Normal"
+                stats = [
+                    f"• {col}:",
+                    f"  - Promedio: {avg:.1f}°C",
+                    f"  - Estado: {fever}"
+                ]
+
+            elif "imc" in col.lower():
+                avg = self.data[col].mean()
+                stats = [
+                    f"• {col}:",
+                    f"  - Promedio: {avg:.1f}",
+                    f"  - Clasificación: {self.classify_bmi(avg)}"
+                ]
+
+            scroll_layout.addWidget(QLabel('\n'.join(stats)))
+
+        except Exception as e:
+            print(f"Error analizando {col}: {str(e)}")
+
+    def classify_blood_pressure(self, systolic, diastolic):
+        if systolic < 120 and diastolic < 80:
+            return "Normal"
+        elif 120 <= systolic < 130 and diastolic < 80:
+            return "Elevada"
+        elif 130 <= systolic < 140 or 80 <= diastolic < 90:
+            return "Hipertensión Etapa 1"
+        else:
+            return "⚠️ Hipertensión Etapa 2"
+
+    def classify_bmi(self, value):
+        if value < 18.5:
+            return "Bajo peso"
+        elif 18.5 <= value < 25:
+            return "Normal"
+        elif 25 <= value < 30:
+            return "Sobrepeso"
+        else:
+            return "⚠️ Obesidad"
 
     def setup_ui(self):
-        self.setWindowTitle("Análisis Básico")
+        self.setWindowTitle("Análisis de Datos Médicos")
         self.setGeometry(400, 400, 800, 600)
 
         layout = QVBoxLayout(self)
@@ -208,35 +299,55 @@ class AnalysisWindow(QDialog):
         content = QWidget()
         scroll_layout = QVBoxLayout(content)
 
-        # Estadísticas descriptivas
-        stats = self.data.describe().reset_index()
-        self.add_table(scroll_layout, "Estadísticas", stats)
+        # =============== DATOS DEMOGRÁFICOS ===============
+        scroll_layout.addWidget(QLabel("<b>Datos Demográficos</b>"))
 
-        # Tipos de datos
-        dtype_df = pd.DataFrame(self.data.dtypes.reset_index())
-        dtype_df.columns = ['Columna', 'Tipo de Dato']
-        self.add_table(scroll_layout, "Tipos de Datos", dtype_df)
+        # Total de pacientes
+        total_pacientes = len(self.data)
+        scroll_layout.addWidget(QLabel(f"• Total de pacientes: {total_pacientes}"))
 
-        # Valores faltantes
-        missing_df = pd.DataFrame(self.data.isnull().sum()).reset_index()
-        missing_df.columns = ['Columna', 'Valores Faltantes']
-        self.add_table(scroll_layout, "Valores Faltantes", missing_df)
+        # Distribución de género
+        if 'Sexo' in self.data.columns:
+            gender_counts = self.data['Sexo'].value_counts()
+            hombres = gender_counts.get('Masculino', 0)
+            mujeres = gender_counts.get('Femenino', 0)
+            otros = total_pacientes - (hombres + mujeres)
+
+            genero_stats = [
+                f"• Distribución por género:",
+                f"  - Masculino: {hombres} ({hombres/total_pacientes:.1%})",
+                f"  - Femenino: {mujeres} ({mujeres/total_pacientes:.1%})",
+                f"  - Otros/No especificado: {otros} ({otros/total_pacientes:.1%})"
+            ]
+            scroll_layout.addWidget(QLabel('\n'.join(genero_stats)))
+
+        # Análisis de edad
+        age_col = self.detect_age_column()
+        if age_col:
+            max_age = self.data[age_col].max()
+            min_age = self.data[age_col].min()
+            avg_age = self.data[age_col].mean()
+            edad_stats = [
+                f"• Rango de edades:",
+                f"  - Máxima: {max_age} años",
+                f"  - Mínima: {min_age} años",
+                f"  - Promedio: {avg_age:.1f} años"
+            ]
+            scroll_layout.addWidget(QLabel('\n'.join(edad_stats)))
+
+        # =============== SIGNOS VITALES ===============
+        scroll_layout.addWidget(QLabel("<b>Signos Vitales</b>"))
+        medical_cols = [col for col in self.data.columns if self.is_medical_indicator(col)]
+
+        for col in medical_cols:
+            if self.data[col].dtype in [np.int64, np.float64]:
+                self.analyze_vital_signs(col, scroll_layout)
+            elif "presión" in col.lower():
+                self.analyze_vital_signs(col, scroll_layout)
 
         scroll.setWidget(content)
+        scroll.setWidgetResizable(True)
         layout.addWidget(scroll)
-
-    def add_table(self, layout, title, df):
-        layout.addWidget(QLabel(f"<b>{title}</b>"))
-        table = QTableWidget()
-        table.setRowCount(len(df))
-        table.setColumnCount(len(df.columns))
-        table.setHorizontalHeaderLabels(df.columns.tolist())
-
-        for row_idx, row in df.iterrows():
-            for col_idx, value in enumerate(row):
-                table.setItem(row_idx, col_idx, QTableWidgetItem(str(value)))
-
-        layout.addWidget(table)
 
 class GraphWidget(QWidget):
     def __init__(self, parent=None):
@@ -250,7 +361,7 @@ class GraphWidget(QWidget):
         # Conectar señales de cambio
         self.x_selector.currentTextChanged.connect(parent.update_graph)
         self.y_selector.currentTextChanged.connect(parent.update_graph)
-        self.graph_type.currentTextChanged.connect(parent.update_graph)
+        self.graph_type.currentTextChanged.connect(self.handle_graph_type_change)
 
     def setup_controls(self):
         self.controls = QWidget()
@@ -273,6 +384,16 @@ class GraphWidget(QWidget):
         layout.addWidget(self.toolbar)
         layout.addWidget(self.controls)
         layout.addWidget(self.canvas)
+
+    def handle_graph_type_change(self):
+        """Ajustar selectores según tipo de gráfico"""
+        graph_type = self.graph_type.currentText()
+        if graph_type in ["Histograma", "Boxplot"]:
+            self.y_selector.setCurrentText('')
+            self.y_selector.setEnabled(False)
+        else:
+            self.y_selector.setEnabled(True)
+        self.parent().update_graph()
 
 class DataAnalysisApp(QMainWindow):
     def __init__(self):
@@ -471,20 +592,38 @@ class DataAnalysisApp(QMainWindow):
                 if not numeric_cols:
                     raise ValueError("No hay columnas numéricas para graficar")
 
+                # Bloquear señales durante actualización
+                self.graph_widget.x_selector.blockSignals(True)
+                self.graph_widget.y_selector.blockSignals(True)
+
                 # Actualizar selectores
                 current_x = self.graph_widget.x_selector.currentText()
                 current_y = self.graph_widget.y_selector.currentText()
 
                 self.graph_widget.x_selector.clear()
-                self.graph_widget.y_selector.clear()
                 self.graph_widget.x_selector.addItems(numeric_cols)
-                self.graph_widget.y_selector.addItems([''] + numeric_cols)  # Permitir vacío
 
-                # Restaurar selección previa si existe
+                self.graph_widget.y_selector.clear()
+                self.graph_widget.y_selector.addItems([''] + numeric_cols)
+
+                # Restaurar o establecer selecciones
                 if current_x in numeric_cols:
                     self.graph_widget.x_selector.setCurrentText(current_x)
-                if current_y in numeric_cols:
-                    self.graph_widget.y_selector.setCurrentText(current_y)
+                else:
+                    self.graph_widget.x_selector.setCurrentText(numeric_cols[0] if numeric_cols else '')
+
+                # Establecer Y solo si es necesario
+                if self.graph_widget.graph_type.currentText() in ["Líneas", "Barras", "Dispersión"]:
+                    if current_y in numeric_cols:
+                        self.graph_widget.y_selector.setCurrentText(current_y)
+                    else:
+                        self.graph_widget.y_selector.setCurrentText(numeric_cols[0] if numeric_cols else '')
+                else:
+                    self.graph_widget.y_selector.setCurrentText('')
+
+                # Desbloquear señales
+                self.graph_widget.x_selector.blockSignals(False)
+                self.graph_widget.y_selector.blockSignals(False)
 
                 self.update_graph()
                 self.stacked_widget.setCurrentWidget(self.graph_widget)
@@ -501,60 +640,129 @@ class DataAnalysisApp(QMainWindow):
             ax.clear()
 
             x_col = self.graph_widget.x_selector.currentText()
-            y_col = self.graph_widget.y_selector.currentText()
             graph_type = self.graph_widget.graph_type.currentText()
 
-            # Validación de parámetros obligatorios
             if not x_col:
-                raise ValueError("Debe seleccionar al menos una columna para el eje X")
+                raise ValueError("Seleccione una columna para analizar")
 
-            x = self.data[x_col].dropna()
-            y = self.data[y_col].dropna() if y_col else None
+            # Detección de parámetros médicos
+            is_medical = {
+                'presión': 'Presión Arterial' in x_col,
+                'saturación': 'Saturación' in x_col,
+                'pulso': 'Pulso' in x_col,
+                'temperatura': 'Temperatura' in x_col,
+                'imc': 'IMC' in x_col
+            }
 
-            # Configurar colores para tema oscuro
+            # Configuraciones comunes
             text_color = 'white'
             accent_color = '#2aa198'
+            ax.set_facecolor('#252525')
+            ax.tick_params(colors=text_color)
+            ax.grid(True, linestyle='--', alpha=0.3, color='#4d4d4d')
 
-            # Configurar gráfico según tipo
-            if graph_type == "Líneas":
-                if not y_col:
-                    raise ValueError("Se requiere una columna Y para gráficos de líneas")
-                ax.plot(x, y, color=accent_color, linewidth=2)
-                ax.set_ylabel(y_col, color=text_color)
+            if is_medical['presión']:
+                # Gráfico especial para presión arterial
+                systolic = self.data[x_col].str.split('/').str[0].astype(float)
+                diastolic = self.data[x_col].str.split('/').str[1].astype(float)
 
-            elif graph_type == "Barras":
-                if not y_col:
-                    raise ValueError("Se requiere una columna Y para gráficos de barras")
-                ax.bar(x, y, color=accent_color)
-                ax.set_ylabel(y_col, color=text_color)
+                ax.scatter(range(len(systolic)), systolic, color='#d73027', label='Sistólica')
+                ax.scatter(range(len(diastolic)), diastolic, color='#4575b4', label='Diastólica')
 
-            elif graph_type == "Dispersión":
-                if not y_col:
-                    raise ValueError("Se requiere una columna Y para gráficos de dispersión")
-                ax.scatter(x, y, color=accent_color, alpha=0.7)
-                ax.set_ylabel(y_col, color=text_color)
+                # Líneas de referencia
+                ax.axhline(120, color='#d73027', linestyle='--', alpha=0.5)
+                ax.axhline(80, color='#4575b4', linestyle='--', alpha=0.5)
 
-            elif graph_type == "Histograma":
-                ax.hist(x, bins='auto', color=accent_color, edgecolor='white')
+                ax.set_title("Presión Arterial por Paciente", color=text_color, pad=15)
+                ax.set_xlabel("Pacientes", color=text_color)
+                ax.set_ylabel("mmHg", color=text_color)
+                ax.legend()
 
-            elif graph_type == "Boxplot":
-                if not y_col:
-                    raise ValueError("Se requiere una columna Y para gráficos de boxplot")
-                ax.boxplot([x, y],
-                           patch_artist=True,
-                           boxprops=dict(facecolor=accent_color),
-                           medianprops=dict(color='white'))
+            elif is_medical['saturación']:
+                # Gráfico de saturación de oxígeno
+                values = self.data[x_col]
+                ax.bar(range(len(values)), values, color=accent_color)
+
+                # Línea de referencia y anotación
+                ax.axhline(95, color='red', linestyle='--', alpha=0.7)
+                ax.annotate('Límite normal (95%)',
+                            xy=(0, 95), xycoords='data',
+                            xytext=(10, 10), textcoords='offset points',
+                            color='red', fontsize=9)
+
+                ax.set_title("Saturación de Oxígeno", color=text_color)
+                ax.set_ylabel("% SpO2", color=text_color)
+                ax.set_ylim(85, 100)
+
+            elif is_medical['imc']:
+                # Boxplot para IMC con categorías
+                categories = [
+                    'Bajo peso (<18.5)',
+                    'Normal (18.5-24.9)',
+                    'Sobrepeso (25-29.9)',
+                    'Obesidad (≥30)'
+                ]
+
+                data = [
+                    self.data[self.data[x_col] < 18.5][x_col],
+                    self.data[(self.data[x_col] >= 18.5) & (self.data[x_col] < 25)][x_col],
+                    self.data[(self.data[x_col] >= 25) & (self.data[x_col] < 30)][x_col],
+                    self.data[self.data[x_col] >= 30][x_col]
+                ]
+
+                box = ax.boxplot(data, patch_artist=True, labels=categories)
+                for patch in box['boxes']:
+                    patch.set_facecolor(accent_color)
+
+                ax.set_title("Distribución de IMC por Categoría", color=text_color)
+                ax.set_ylabel("Índice de Masa Corporal", color=text_color)
+
+            elif is_medical['temperatura']:
+                # Gráfico de línea para temperatura con área
+                x = range(len(self.data))
+                y = self.data[x_col]
+
+                ax.plot(x, y, color=accent_color, marker='o')
+                ax.fill_between(x, y, 37.5, where=(y >= 37.5),
+                                color='red', alpha=0.3, interpolate=True)
+                ax.axhline(37.5, color='red', linestyle='--', label='Fiebre')
+
+                ax.set_title("Registro de Temperatura Corporal", color=text_color)
+                ax.set_ylabel("°C", color=text_color)
+                ax.legend()
+
+            elif is_medical['pulso']:
+                # Histograma de frecuencia cardíaca
+                sns.histplot(self.data[x_col], bins=15, kde=True,
+                             color=accent_color, ax=ax)
+
+                # Zonas de riesgo
+                ax.axvline(60, color='green', linestyle='--', alpha=0.7)
+                ax.axvline(100, color='orange', linestyle='--', alpha=0.7)
+                ax.annotate('Bradicardia', xy=(55, 0),
+                            rotation=90, color='green', alpha=0.7)
+                ax.annotate('Taquicardia', xy=(105, 0),
+                            rotation=90, color='orange', alpha=0.7)
+
+                ax.set_title("Distribución de Frecuencia Cardíaca", color=text_color)
+                ax.set_xlabel("Latidos por minuto", color=text_color)
 
             else:
-                raise ValueError("Tipo de gráfico no reconocido")
+                # Gráfico genérico para otras columnas
+                if graph_type == "Histograma":
+                    sns.histplot(self.data[x_col], bins='auto',
+                                 color=accent_color, ax=ax)
+                elif graph_type == "Boxplot":
+                    sns.boxplot(y=self.data[x_col], color=accent_color, ax=ax)
+                else:
+                    y_col = self.graph_widget.y_selector.currentText()
+                    if y_col:
+                        sns.scatterplot(x=self.data[x_col], y=self.data[y_col],
+                                        color=accent_color, ax=ax)
+                        ax.set_ylabel(y_col, color=text_color)
 
-            # Configuración común del gráfico
-            ax.set_title(f"{graph_type}: {x_col}" + (f" vs {y_col}" if y_col else ""),
-                         color=text_color, pad=15)
-            ax.set_xlabel(x_col, color=text_color)
-            ax.tick_params(colors=text_color)
-            ax.set_facecolor('#252525')
-            ax.grid(True, linestyle='--', alpha=0.3, color='#4d4d4d')
+                ax.set_title(f"{graph_type}: {x_col}", color=text_color)
+                ax.set_xlabel(x_col, color=text_color)
 
             self.graph_widget.canvas.draw()
 

@@ -1,0 +1,100 @@
+/* ---------------------------- */
+/* VENTANA DE ANÁLISIS MEJORADA */
+/* ---------------------------- */
+
+AnalysisWindow {
+    background-color: #2d3848;
+    color: #ffffff;
+    border: 1px solid #3a4555;
+    border-radius: 8px;
+}
+
+QScrollArea {
+    background: transparent;
+    border: none;
+    padding: 10px;
+    margin: 0;
+}
+
+/* Encabezados de sección */
+QLabel[text^="<b>"] {
+    color: #8ab4f8;
+    font-family: 'Segoe UI Semibold';
+    font-size: 17px;
+    margin: 20px 0 12px 0;
+    padding: 12px 20px;
+    border-radius: 6px;
+    background: linear-gradient(to right, rgba(138, 180, 248, 0.15), transparent);
+    border-left: 4px solid #8ab4f8;
+    letter-spacing: 0.5px;
+}
+
+/* Items de lista principales */
+QLabel {
+    font-family: 'Segoe UI';
+    font-size: 14px;
+    color: #d3dae3;
+    line-height: 1.6;
+    margin: 8px 0;
+    padding: 8px 25px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Total de pacientes */
+QLabel[text*="Total de pacientes"] {
+    color: #ffd700 !important;
+    font-weight: 500;
+    border-bottom: 1px solid #3a4555;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    font-size: 15px !important;
+}
+
+/* Líneas de género */
+QLabel[text*="Masculino"],
+QLabel[text*="Femenino"],
+QLabel[text*="Otros/No especificado"] {
+    color: #c6d0fd !important;
+    font-family: 'Segoe UI Semilight';
+    padding-left: 35px !important;
+    background-color: rgba(198, 208, 253, 0.05) !important;
+}
+
+/* Porcentajes */
+QLabel[text*="%"] {
+    font-size: 12.5px;
+    color: #a8a8a8 !important;
+    font-style: italic;
+    display: inline !important; /* Asegura que se muestren los porcentajes */
+}
+
+/* Valores numéricos (excluyendo género) */
+QLabel[text*=":"] {
+    color: #98f598 !important;
+    font-family: 'Consolas';
+    font-size: 13.5px;
+    font-weight: 500;
+}
+
+/* Excluir líneas de género del estilo numérico */
+QLabel[text*="Distribución por género"] ~ QLabel[text*=":"] {
+    color: #c6d0fd !important;
+    font-family: 'Segoe UI' !important;
+}
+
+/* Clasificaciones */
+QLabel[text*="Clasificación"] {
+    color: #89d3ff !important;
+    font-style: italic;
+}
+
+/* Alertas/éxito */
+QLabel[text*="⚠"] { color: #ff9494 !important; }
+QLabel[text*="Normal"] { color: #89f5a2 !important; }
+
+/* Efecto hover solo para ítems principales */
+QLabel:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: background 0.3s ease;
+}

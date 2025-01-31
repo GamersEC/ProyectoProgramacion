@@ -1,66 +1,147 @@
-/* === Correcciones para inputs === */
-QLineEdit {
-    padding: 12px 15px;          /* Espacio interno aumentado */
-    border: 2px solid #4d4d4d;
-    border-radius: 6px;
-    font-size: 14px;             /* Tamaño de fuente aumentado */
-    color: #ffffff;              /* Texto en blanco */
-    background-color: #333333;
-    min-width: 300px;            /* Ancho mínimo aumentado */
-    min-height: 40px;            /* Altura mínima */
+/* ============================== */
+/* ESTILOS UNIFICADOS PARA LA APP */
+/* ============================== */
+
+/* --- Colores base --- */
+$color-fondo: #2d3848;
+$color-borde: #3a4555;
+$color-primario: #8ab4f8;
+$color-texto: #d3dae3;
+$color-destacado: #ffd700;
+
+/* ------------------------------- */
+/* COMPONENTES PRINCIPALES */
+/* ------------------------------- */
+
+QMainWindow, QDialog {
+    background-color: $color-fondo;
+    color: $color-texto;
+    font-family: 'Segoe UI';
+    font-size: 14px;
 }
 
-/* Placeholder visible */
+/* --- Inputs --- */
+QLineEdit {
+    padding: 12px 15px;
+    border: 1px solid $color-borde;
+    border-radius: 6px;
+    font-size: 14px;
+    color: $color-texto;
+    background-color: rgba(0, 0, 0, 0.15);
+    min-width: 300px;
+    min-height: 40px;
+    selection-background-color: $color-primario;
+}
+
 QLineEdit::placeholder {
-    color: #858585;              /* Color gris medio */
+    color: #a8a8a8;
     font-size: 13px;
 }
 
-/* Ajustes específicos para diálogos */
-AddDataDialog QLineEdit,
-SearchReplaceDialog QLineEdit {
-    min-width: 350px;            /* Ancho aumentado para diálogos */
-    padding: 15px 20px;          /* Más padding */
-}
-
-/* === Ajustes de tamaño general === */
-QDialog {
-    min-width: 500px;            /* Ancho mínimo para ventanas */
-    min-height: 300px;           /* Altura mínima */
-}
-
-QMainWindow {
-    min-width: 800px;            /* Tamaño mínimo ventana principal */
-    min-height: 600px;
-}
-
-/* === Corrección de texto en tablas === */
-QTableWidget::item {
-    color: #e0e0e0;              /* Asegurar color de texto */
-    padding: 8px;                /* Más espacio en celdas */
-}
-
-/* === Botones y comboboxes === */
+/* --- Botones --- */
 QPushButton {
-    min-width: 120px;            /* Ancho mínimo para botones */
-    padding: 10px 20px;          /* Más espacio interno */
+    min-width: 120px;
+    padding: 10px 20px;
+    background-color: rgba(138, 180, 248, 0.1);
+    border: 1px solid $color-borde;
+    border-radius: 4px;
+    color: $color-primario;
+    font-weight: 500;
 }
 
+QPushButton:hover {
+    background-color: rgba(138, 180, 248, 0.2);
+    border-color: $color-primario;
+}
+
+QPushButton:pressed {
+    background-color: rgba(138, 180, 248, 0.3);
+}
+
+/* --- Comboboxes --- */
 QComboBox {
     min-width: 200px;
     padding: 10px;
+    background-color: rgba(0, 0, 0, 0.15);
+    color: $color-texto;
+    border: 1px solid $color-borde;
+    border-radius: 4px;
 }
-/* Añade estos estilos para los ComboBox */
-QComboBox {
-    background-color: #333333;
-    color: white;
-    border: 1px solid #4d4d4d;
-    padding: 8px;
-    selection-background-color: #2aa198;
+
+QComboBox::drop-down {
+    border: none;
+    background: transparent;
 }
 
 QComboBox QAbstractItemView {
-    background-color: #333333;
-    color: white;
-    selection-background-color: #2aa198;
+    background-color: lighten($color-fondo, 5%);
+    color: $color-texto;
+    selection-background-color: $color-primario;
+}
+
+/* --- Tablas --- */
+QTableWidget {
+    background-color: rgba(0, 0, 0, 0.1);
+    alternate-background-color: rgba(255, 255, 255, 0.03);
+    gridline-color: $color-borde;
+}
+
+QTableWidget::item {
+    color: $color-texto;
+    padding: 8px;
+    border-bottom: 1px solid rgba(58, 69, 85, 0.5);
+}
+
+QHeaderView::section {
+    background-color: rgba(138, 180, 248, 0.15);
+    color: $color-primario;
+    padding: 8px;
+    border: none;
+}
+
+/* ------------------------------- */
+/* ELEMENTOS ESPECÍFICOS (Análisis) */
+/* ------------------------------- */
+
+/* Encabezados de sección */
+QLabel[text^="<b>"] {
+    color: $color-primario;
+    font-size: 17px;
+    margin: 20px 0 12px 0;
+    padding: 12px 20px;
+    border-radius: 6px;
+    background: linear-gradient(to right, rgba(138, 180, 248, 0.15), transparent);
+    border-left: 4px solid $color-primario;
+}
+
+/* Items de lista */
+QLabel {
+    font-size: 14px;
+    color: $color-texto;
+    padding: 8px 25px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Destacados numéricos */
+QLabel[text*=":"] {
+    color: #98f598 !important;
+    font-family: 'Consolas';
+    font-size: 13.5px;
+}
+
+/* Clasificaciones especiales */
+QLabel[text*="Clasificación"] { color: #89d3ff !important; }
+QLabel[text*="⚠"] { color: #ff9494 !important; }
+QLabel[text*="Normal"] { color: #89f5a2 !important; }
+
+/* Efectos de interactividad */
+QLineEdit:hover, QComboBox:hover, QPushButton:hover {
+    border-color: lighten($color-borde, 10%);
+    transition: all 0.3s ease;
+}
+
+QLineEdit:focus, QComboBox:open {
+    border-color: $color-primario;
+    background-color: rgba(0, 0, 0, 0.2);
 }
