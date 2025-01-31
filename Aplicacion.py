@@ -2,22 +2,21 @@ import matplotlib
 matplotlib.use('QtAgg')
 
 import sys
-import seaborn as sns
-import pandas as pd
-import numpy as np
+import os
 import re
-import os  # Importar módulo os
 import tempfile
-from PyQt6.QtWidgets import QDialogButtonBox
-from PyQt6 import QtWidgets, QtCore
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
+from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QLabel, QFileDialog, QMessageBox,
     QStackedWidget, QDialog, QComboBox, QFormLayout, QScrollArea, QLineEdit,
-    QFrame, QSizePolicy, QTabWidget, QCheckBox, QHeaderView
+    QFrame, QSizePolicy, QTabWidget, QCheckBox, QHeaderView, QDialogButtonBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
@@ -27,9 +26,9 @@ sns.set_theme(style="darkgrid")
 class LoginWindow(QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("App de Análisis de Datos")
-        self.setWindowIcon(QIcon("icons/login.png"))
-        self.setMinimumSize(400, 500)
+        self.setWindowTitle("Deep Health - Iniciar Sesión")
+        self.setWindowIcon(QIcon("icons/logo_login.png"))
+        self.setMinimumSize(400, 600) #Modificar tamaño de la ventana
         self.attempts = 0
         self.users_file = "data/users.xlsx"
         self.initialize_users_file()  # Inicializar archivo de usuarios
@@ -39,10 +38,7 @@ class LoginWindow(QDialog):
     def initialize_users_file(self):
         """Crea el archivo de usuarios si no existe"""
         if not os.path.exists(self.users_file):
-            df = pd.DataFrame({
-                "Username": ["admin"],
-                "Password": ["admin"]
-            })
+            df = pd.DataFrame(columns=["Username", "Password"])
             df.to_excel(self.users_file, index=False)
 
     def center_window(self):
@@ -115,6 +111,20 @@ class LoginWindow(QDialog):
         footer.setObjectName("loginFooter")
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        # Botón de información
+        info_button = QPushButton("🤓")
+        info_button.setObjectName("infoButton")
+        info_button.clicked.connect(self.show_info)
+
+        # Layout para el footer y el botón de info
+        footer_layout = QVBoxLayout()
+        footer_layout.addWidget(footer)
+        footer_layout.addWidget(info_button, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        # Contenedor para el footer y botón de info
+        footer_container = QWidget()
+        footer_container.setLayout(footer_layout)
+
         # Ensamblado final
         container_layout.addWidget(self.logo_label)
         container_layout.addWidget(title)
@@ -123,7 +133,10 @@ class LoginWindow(QDialog):
         container_layout.addStretch()
 
         main_layout.addWidget(container)
-        main_layout.addWidget(footer, alignment=Qt.AlignmentFlag.AlignBottom)
+        main_layout.addWidget(footer_container, alignment=Qt.AlignmentFlag.AlignBottom)
+
+    def show_info(self):
+        QMessageBox.information(self, "Desarrolladores", "• Verónica Argudo\n• Marcus Mayorga\n• Luis Ordoñez")
 
     def register_user(self):
         """Maneja el registro de nuevos usuarios"""
@@ -600,9 +613,9 @@ class DataAnalysisApp(QMainWindow):
         )
 
     def setup_ui(self):
-        self.setWindowTitle("App de Análisis de Datos")
+        self.setWindowTitle("Deep Health - Análisis de Datos Médicos")
         self.setGeometry(100, 100, 1200, 800)
-        self.setWindowIcon(QIcon("icons/analysis.png"))
+        self.setWindowIcon(QIcon("icons/logo_login.png"))
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
