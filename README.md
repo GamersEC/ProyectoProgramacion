@@ -1,4 +1,4 @@
-# Deep Health - Plataforma de Análisis de Datos Médicos
+# Deep Health - Aplicación de Análisis de Datos Médicos
 
 ![Logo](icons/logo_login.png)
 
