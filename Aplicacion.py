@@ -4,25 +4,25 @@ matplotlib.use('QtAgg')
 import sys
 import os
 import re
-import tempfile
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from PyQt6 import QtWidgets, QtCore
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QLabel, QFileDialog, QMessageBox,
     QStackedWidget, QDialog, QComboBox, QFormLayout, QScrollArea, QLineEdit,
-    QFrame, QSizePolicy, QTabWidget, QCheckBox, QHeaderView, QDialogButtonBox
+    QFrame, QSizePolicy, QCheckBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
 
 sns.set_theme(style="darkgrid")
 
+
+# ======================= VENTANA DE LOGIN =======================
 class LoginWindow(QDialog):
     def __init__(self):
         super().__init__()
@@ -31,16 +31,20 @@ class LoginWindow(QDialog):
         self.setMinimumSize(400, 600) #Modificar tamaño de la ventana
         self.attempts = 0
         self.users_file = "data/users.xlsx"
-        self.initialize_users_file()  # Inicializar archivo de usuarios
+        self.initialize_users_file()
         self.setup_ui()
         self.center_window()
 
+
+    # ======================= INICIALIZACIÓN DE USUARIOS =======================
     def initialize_users_file(self):
         """Crea el archivo de usuarios si no existe"""
         if not os.path.exists(self.users_file):
             df = pd.DataFrame(columns=["Username", "Password"])
             df.to_excel(self.users_file, index=False)
 
+
+    # ========================= CENTRADO DE VENTANA =========================
     def center_window(self):
         qr = self.frameGeometry()
         if self.screen():
@@ -48,6 +52,8 @@ class LoginWindow(QDialog):
             qr.moveCenter(cp)
             self.move(qr.topLeft())
 
+
+    # ========================= CONFIGURACIÓN DE INTERFAZ =========================
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
 
@@ -135,6 +141,8 @@ class LoginWindow(QDialog):
         main_layout.addWidget(container)
         main_layout.addWidget(footer_container, alignment=Qt.AlignmentFlag.AlignBottom)
 
+
+    # ========================= VENTANA DE INFORMACIÓN =========================
     def show_info(self):
         QMessageBox.information(self, "Desarrolladores", "• Verónica Argudo\n• Marcus Mayorga\n• Luis Ordoñez")
 
@@ -169,6 +177,8 @@ class LoginWindow(QDialog):
             "Usuario registrado correctamente"
         )
 
+
+    # ========================= REGISTRO DE USUARIOS =========================
     def check_credentials(self):
         """Valida las credenciales contra el archivo Excel"""
         if self.attempts >= 3:
@@ -200,6 +210,7 @@ class LoginWindow(QDialog):
             )
 
 
+# ========================= HILO PARA CARGA DE DATOS =========================
 class DataLoaderThread(QThread):
     loaded = pyqtSignal(pd.DataFrame)
     error = pyqtSignal(str)
@@ -220,6 +231,8 @@ class DataLoaderThread(QThread):
         except Exception as e:
             self.error.emit(str(e))
 
+
+# ========================= DIÁLOGO DE BUSCAR Y REEMPLAZAR =========================
 class SearchReplaceDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -246,6 +259,8 @@ class SearchReplaceDialog(QDialog):
         layout.addWidget(self.case_checkbox)
         layout.addWidget(self.replace_btn)
 
+
+# ========================= DIÁLOGO PARA AÑADIR DATOS =========================
 class AddDataDialog(QDialog):
     def __init__(self, columns, parent=None):
         super().__init__(parent)
@@ -268,6 +283,8 @@ class AddDataDialog(QDialog):
         self.add_btn.clicked.connect(self.accept)
         layout.addWidget(self.add_btn)
 
+
+# ========================= VENTANA DE ANÁLISIS MÉDICO =========================
 class AnalysisWindow(QDialog):
     def __init__(self, data, parent=None):
         super().__init__(parent)
@@ -374,6 +391,7 @@ class AnalysisWindow(QDialog):
         content = QWidget()
         scroll_layout = QVBoxLayout(content)
 
+
         # =============== DATOS DEMOGRÁFICOS ===============
         scroll_layout.addWidget(QLabel("<b>Datos Demográficos</b>"))
 
@@ -410,6 +428,7 @@ class AnalysisWindow(QDialog):
             ]
             scroll_layout.addWidget(QLabel('\n'.join(edad_stats)))
 
+
         # =============== SIGNOS VITALES ===============
         scroll_layout.addWidget(QLabel("<b>Signos Vitales</b>"))
         medical_cols = [col for col in self.data.columns if self.is_medical_indicator(col)]
@@ -424,6 +443,8 @@ class AnalysisWindow(QDialog):
         scroll.setWidgetResizable(True)
         layout.addWidget(scroll)
 
+
+# ========================= VENTANA DE BUSQUEDA =========================
 class SearchDialog(QDialog):
     def __init__(self, data, parent=None):
         super().__init__(parent)
@@ -493,6 +514,8 @@ class SearchDialog(QDialog):
                 self.case_checkbox.isChecked()
             )
 
+
+# ========================= VENTANA PARA REEMPLAZAR =========================
 class ReplaceDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -514,6 +537,8 @@ class ReplaceDialog(QDialog):
         layout.addLayout(form_layout)
         layout.addWidget(self.replace_btn)
 
+
+# ========================= WIDGET DE GRÁFICO =========================
 class GraphWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -560,6 +585,8 @@ class GraphWidget(QWidget):
             self.y_selector.setEnabled(True)
         self.parent().update_graph()
 
+
+# ========================= VENTANA DE EDICIÓN DE REGISTRO =========================
 class EditDialog(QDialog):
     def __init__(self, columns, data, parent=None):
         super().__init__(parent)
@@ -583,6 +610,8 @@ class EditDialog(QDialog):
         self.save_btn.clicked.connect(self.accept)
         layout.addWidget(self.save_btn)
 
+
+# ======================= VENTANA PRINCIPAL =======================
 class DataAnalysisApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -592,7 +621,7 @@ class DataAnalysisApp(QMainWindow):
         self.graph_widget = None
         self.setup_ui()
 
-    # En la clase DataAnalysisApp:
+    # Crear un nuevo documento con las columnas estándar
     def new_document(self):
         """Crea un nuevo documento con la estructura base requerida"""
         columns = [
@@ -612,6 +641,7 @@ class DataAnalysisApp(QMainWindow):
             "Use el botón 'Añadir Datos' para ingresar registros."
         )
 
+        # Configura la interfaz de usuario principal de la aplicación
     def setup_ui(self):
         self.setWindowTitle("Deep Health - Análisis de Datos Médicos")
         self.setGeometry(100, 100, 1200, 800)
@@ -624,6 +654,7 @@ class DataAnalysisApp(QMainWindow):
         self.setup_sidebar(main_layout)
         self.setup_main_content(main_layout)
 
+    # Configura la barra lateral con botones para diferentes acciones
     def setup_sidebar(self, main_layout):
         left_panel = QWidget()
         left_panel.setMinimumWidth(250)
@@ -638,6 +669,7 @@ class DataAnalysisApp(QMainWindow):
         button_layout.setContentsMargins(0, 0, 0, 0)
         button_layout.setSpacing(15)
 
+        # Lista de botones con texto, icono y acción
         buttons = [
             ("Nuevo Documento", "icons/new.png", self.new_document),  # Nuevo botón
             ("Cargar Datos", "icons/load.png", self.load_data),
@@ -650,6 +682,7 @@ class DataAnalysisApp(QMainWindow):
             ("Volver a tabla", "icons/back.png", self.show_table)
         ]
 
+        # Crear botones con los iconos y las acciones asociadas
         for text, icon, handler in buttons:
             btn = QPushButton(text)
             btn.setIcon(QIcon(icon))
@@ -661,19 +694,21 @@ class DataAnalysisApp(QMainWindow):
             btn.clicked.connect(handler)
             button_layout.addWidget(btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # Añadir el contenedor de botones centrado verticalmente
+        # Añadir el contenedor de botones al panel izquierdo
         left_main_layout.addStretch()
         left_main_layout.addWidget(button_container, alignment=Qt.AlignmentFlag.AlignCenter)
         left_main_layout.addStretch()
 
         main_layout.addWidget(left_panel)
 
+    # Configura el contenido principal con un widget de tabla
     def setup_main_content(self, main_layout):
         self.stacked_widget = QStackedWidget()
         self.table_widget = QTableWidget()
         self.stacked_widget.addWidget(self.table_widget)
         main_layout.addWidget(self.stacked_widget, 5)
 
+    # Cargar los datos desde un archivo seleccionado por el usuario
     def load_data(self):
         if self.thread and self.thread.isRunning():
             self.thread.quit()
@@ -693,6 +728,7 @@ class DataAnalysisApp(QMainWindow):
             self.thread.error.connect(self.show_error)
             self.thread.start()
 
+    # Procesar los datos cargados con éxito
     def on_data_loaded(self, df):
         self.data = df
         self.populate_table()
@@ -702,17 +738,18 @@ class DataAnalysisApp(QMainWindow):
             f"Datos cargados correctamente\nRegistros: {len(df)}"
         )
 
+    # Población de la tabla con los datos
     def populate_table(self):
         if self.data is not None:
             self.table_widget.clear()
             self.table_widget.setRowCount(0)
             self.table_widget.setColumnCount(0)
 
-            # Configurar columnas incluso si el DataFrame está vacío
+            # Configurar las columnas basadas en los datos
             self.table_widget.setColumnCount(len(self.data.columns))
             self.table_widget.setHorizontalHeaderLabels(self.data.columns.tolist())
 
-            # Llenar datos si existen
+            # Llenar la tabla con los datos si existen
             if not self.data.empty:
                 self.table_widget.setRowCount(len(self.data))
                 for row_idx, row in self.data.iterrows():
@@ -720,6 +757,7 @@ class DataAnalysisApp(QMainWindow):
                         item = QTableWidgetItem(str(value))
                         self.table_widget.setItem(row_idx, col_idx, item)
 
+    # Iniciar el diálogo de búsqueda y reemplazo
     def search_replace(self):
         if self.data is None:
             QMessageBox.warning(self, "Advertencia", "Primero cargue un conjunto de datos")
@@ -730,6 +768,7 @@ class DataAnalysisApp(QMainWindow):
             # La lógica de reemplazo se maneja desde el diálogo
             pass
 
+    # Realizar la operación de reemplazo en los datos
     def perform_replace(self, search_text, replace_text, case_sensitive):
         try:
             if case_sensitive:
@@ -756,6 +795,7 @@ class DataAnalysisApp(QMainWindow):
         except Exception as e:
             self.show_error(str(e))
 
+    # Iniciar el diálogo para editar datos existentes
     def edit_data(self):
         if self.data is None or self.data.empty:
             QMessageBox.warning(self, "Advertencia", "No hay datos para editar")
@@ -770,7 +810,7 @@ class DataAnalysisApp(QMainWindow):
             # Obtener datos actuales
             row_data = self.data.iloc[selected_row].to_dict()
 
-            # Mostrar diálogo de edición
+            # Mostrar el diálogo de edición
             dialog = EditDialog(self.data.columns.tolist(), row_data, self)
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 # Actualizar datos
@@ -1037,6 +1077,8 @@ class DataAnalysisApp(QMainWindow):
             QMessageBox.StandardButton.Ok
         )
 
+
+# ======================= EJECUCIÓN PRINCIPAL =======================
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
