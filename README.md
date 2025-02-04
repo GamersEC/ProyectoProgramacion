@@ -35,7 +35,7 @@
 - Personalización de ejes y tipos de gráficos (líneas, barras, dispersión).
 
 ### 🛠️ Tecnologías Utilizadas
-- **Lenguaje**: Python 3
+- **Lenguaje**: Python
 - **Interfaz gráfica**: PyQt6
 - **Análisis de datos**: Pandas, NumPy
 - **Visualización**: Matplotlib, Seaborn
