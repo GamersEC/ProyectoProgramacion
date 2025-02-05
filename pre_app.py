@@ -1,6 +1,5 @@
 import matplotlib
 matplotlib.use('QtAgg')
-
 import sys
 import os
 import re
@@ -10,11 +9,12 @@ import seaborn as sns
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QLabel, QFileDialog, QMessageBox,
     QStackedWidget, QDialog, QComboBox, QFormLayout, QScrollArea, QLineEdit,
-    QFrame, QSizePolicy, QCheckBox
+    QFrame, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
@@ -24,25 +24,26 @@ sns.set_theme(style="darkgrid")
 
 # ======================= VENTANA DE LOGIN =======================
 class LoginWindow(QDialog):
+    ADMIN_PASSWORD = "admin123"  # Cambia esto por una contraseña segura
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Deep Health - Iniciar Sesión")
         self.setWindowIcon(QIcon("icons/logo_login.png"))
-        self.setMinimumSize(400, 600) #Modificar tamaño de la ventana
+        self.setMinimumSize(400, 600)
         self.attempts = 0
         self.users_file = "data/users.xlsx"
         self.initialize_users_file()
         self.setup_ui()
         self.center_window()
-
+        self.current_user = None  # Guarda el usuario que inicia sesión
 
     # ======================= INICIALIZACIÓN DE USUARIOS =======================
     def initialize_users_file(self):
         """Crea el archivo de usuarios si no existe"""
         if not os.path.exists(self.users_file):
-            df = pd.DataFrame(columns=["Username", "Password"])
+            df = pd.DataFrame(columns=["Nombre", "Apellido", "Cargo", "Username", "Password"])
             df.to_excel(self.users_file, index=False)
-
 
     # ========================= CENTRADO DE VENTANA =========================
     def center_window(self):
@@ -51,7 +52,6 @@ class LoginWindow(QDialog):
             cp = self.screen().availableGeometry().center()
             qr.moveCenter(cp)
             self.move(qr.topLeft())
-
 
     # ========================= CONFIGURACIÓN DE INTERFAZ =========================
     def setup_ui(self):
@@ -141,46 +141,68 @@ class LoginWindow(QDialog):
         main_layout.addWidget(container)
         main_layout.addWidget(footer_container, alignment=Qt.AlignmentFlag.AlignBottom)
 
-
-    # ========================= VENTANA DE INFORMACIÓN =========================
-    def show_info(self):
-        QMessageBox.information(self, "Desarrolladores", "• Verónica Argudo\n• Marcus Mayorga\n• Luis Ordoñez")
-
+    # ========================= VENTANAS DE REGISTRO =========================
     def register_user(self):
-        """Maneja el registro de nuevos usuarios"""
-        username = self.username_input.text()
-        password = self.password_input.text()
+        """Ventana de registro de usuario"""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Registro de Usuario")
+        layout = QVBoxLayout(dialog)
 
-        if not username or not password:
-            QMessageBox.warning(self, "Error", "Usuario y contraseña son obligatorios")
+        form_layout = QFormLayout()
+        name_input = QLineEdit()
+        surname_input = QLineEdit()
+        role_input = QComboBox()
+        role_input.addItems(["Administrador", "Usuario"])
+        username_input = QLineEdit()
+        password_input = QLineEdit()
+        password_input.setEchoMode(QLineEdit.EchoMode.Password)
+        admin_password_input = QLineEdit()
+        admin_password_input.setEchoMode(QLineEdit.EchoMode.Password)
+
+        form_layout.addRow("Nombre:", name_input)
+        form_layout.addRow("Apellido:", surname_input)
+        form_layout.addRow("Cargo:", role_input)
+        form_layout.addRow("Usuario:", username_input)
+        form_layout.addRow("Contraseña:", password_input)
+        form_layout.addRow("Contraseña de Administrador:", admin_password_input)
+
+        register_button = QPushButton("Registrar")
+        register_button.clicked.connect(lambda: self.process_registration(
+            dialog, name_input, surname_input, role_input, username_input, password_input, admin_password_input))
+
+        layout.addLayout(form_layout)
+        layout.addWidget(register_button)
+        dialog.exec()
+
+    def process_registration(self, dialog, name, surname, role, username, password, admin_password):
+        """Procesa el registro del usuario"""
+        if admin_password.text() != self.ADMIN_PASSWORD:
+            QMessageBox.critical(self, "Error", "Contraseña de administrador incorrecta")
+            return
+
+        if not all([name.text(), surname.text(), username.text(), password.text()]):
+            QMessageBox.warning(self, "Error", "Todos los campos son obligatorios")
             return
 
         try:
-            # Cargar usuarios existentes
             df = pd.read_excel(self.users_file)
         except FileNotFoundError:
-            df = pd.DataFrame(columns=["Username", "Password"])
+            df = pd.DataFrame(columns=["Nombre", "Apellido", "Cargo", "Username", "Password"])
 
-        # Verificar si el usuario ya existe
-        if username in df["Username"].values:
+        if username.text() in df["Username"].values:
             QMessageBox.warning(self, "Error", "El usuario ya existe")
             return
 
-        # Añadir nuevo usuario
-        new_user = pd.DataFrame([[username, password]], columns=["Username", "Password"])
+        new_user = pd.DataFrame([[name.text(), surname.text(), role.currentText(), username.text(), password.text()]],
+                                columns=["Nombre", "Apellido", "Cargo", "Username", "Password"])
         df = pd.concat([df, new_user], ignore_index=True)
         df.to_excel(self.users_file, index=False)
+        QMessageBox.information(self, "Registro exitoso", "Usuario registrado correctamente")
+        dialog.accept()
 
-        QMessageBox.information(
-            self,
-            "Registro exitoso",
-            "Usuario registrado correctamente"
-        )
-
-
-    # ========================= REGISTRO DE USUARIOS =========================
+    # ========================= VALIDACIÓN DE CREDENCIALES =========================
     def check_credentials(self):
-        """Valida las credenciales contra el archivo Excel"""
+        """Valida las credenciales contra el archivo Excel y muestra el nombre del usuario"""
         if self.attempts >= 3:
             QMessageBox.critical(self, "Bloqueado", "Demasiados intentos fallidos")
             self.reject()
@@ -195,19 +217,83 @@ class LoginWindow(QDialog):
             QMessageBox.critical(self, "Error", "Base de datos de usuarios no encontrada")
             return
 
-        # Buscar coincidencias
-        valid_user = df[(df["Username"] == username) & (df["Password"] == password)]
+        user_data = df[(df["Username"] == username) & (df["Password"] == password)]
 
-        if not valid_user.empty:
+        if not user_data.empty:
+            self.current_user = user_data.iloc[0]["Nombre"]  # Guarda el nombre del usuario
+            self.current_role = user_data.iloc[0]["Cargo"]  # Guarda el cargo del usuario
             self.accept()
+
+            # Abre la ventana de bienvenida después de un inicio de sesión exitoso
+            welcome_window = WelcomeWindow(self.current_user, self.current_role)
+            welcome_window.exec()
+
         else:
             self.attempts += 1
             remaining = 3 - self.attempts
             QMessageBox.warning(
-                self,
+            self,
                 "Error",
                 f"Credenciales incorrectas\nIntentos restantes: {remaining}"
             )
+
+    # ========================= VENTANA DE INFORMACIÓN =========================
+    def show_info(self):
+        QMessageBox.information(self, "Desarrolladores", "• Verónica Argudo\n• Marcus Mayorga\n• Luis Ordoñez")
+
+# ========================= VENTANA DE BIENVENIDA =========================
+class WelcomeWindow(QDialog):
+    def __init__(self, username, role):
+        super().__init__()
+        self.setWindowTitle("Bienvenido")
+        self.setWindowIcon(QIcon("icons/logo_login.png"))
+        self.setMinimumSize(300, 200)
+
+        self.time_remaining = 3  # Tiempo inicial en segundos
+
+        layout = QVBoxLayout(self)
+
+        # Mensaje de bienvenida
+        self.welcome_label = QLabel(f"¡Bienvenido, {username}!", self)
+        self.welcome_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.welcome_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+
+        # Cargo del usuario
+        self.role_label = QLabel(f"Tu cargo: {role}", self)
+        self.role_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.role_label.setStyleSheet("font-size: 14px;")
+
+        # Botón de aceptar
+        self.ok_button = QPushButton("Aceptar")
+        self.ok_button.clicked.connect(self.accept)
+
+        # Temporizador (etiqueta)
+        self.timer_label = QLabel(f"Cerrando en {self.time_remaining}...", self)
+        self.timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Layout de botones
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.ok_button)
+        button_layout.addWidget(self.timer_label)
+
+        # Agregar widgets al layout principal
+        layout.addWidget(self.welcome_label)
+        layout.addWidget(self.role_label)
+        layout.addLayout(button_layout)
+
+        # Iniciar temporizador de 3 segundos
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_timer)
+        self.timer.start(1000)  # Ejecuta cada 1 segundo
+
+    def update_timer(self):
+        """Actualiza el temporizador y cierra la ventana cuando llegue a 0"""
+        self.time_remaining -= 1
+        self.timer_label.setText(f"Cerrando en {self.time_remaining}...")
+
+        if self.time_remaining == 0:
+            self.timer.stop()
+            self.accept()  # Cierra la ventana automáticamente
 
 
 # ========================= HILO PARA CARGA DE DATOS =========================
@@ -232,7 +318,7 @@ class DataLoaderThread(QThread):
             self.error.emit(str(e))
 
 
-# ========================= DIÁLOGO DE BUSCAR Y REEMPLAZAR =========================
+""""# ========================= DIÁLOGO DE BUSCAR Y REEMPLAZAR =========================
 class SearchReplaceDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -257,7 +343,7 @@ class SearchReplaceDialog(QDialog):
 
         layout.addLayout(form_layout)
         layout.addWidget(self.case_checkbox)
-        layout.addWidget(self.replace_btn)
+        layout.addWidget(self.replace_btn)"""
 
 
 # ========================= DIÁLOGO PARA AÑADIR DATOS =========================
@@ -285,8 +371,17 @@ class AddDataDialog(QDialog):
             layout.addWidget(self.inputs[col])
 
         self.add_btn = QPushButton("Añadir Registro")
-        self.add_btn.clicked.connect(self.accept)
+        self.add_btn.clicked.connect(self.collect_data)
         layout.addWidget(self.add_btn)
+
+    def collect_data(self):
+        self.new_data = {}
+        for col, widget in self.inputs.items():
+            if isinstance(widget, QComboBox):
+                self.new_data[col] = widget.currentText()
+            else:
+                self.new_data[col] = widget.text()
+        self.accept()
 
 
 # ========================= VENTANA DE ANÁLISIS MÉDICO =========================
@@ -454,70 +549,153 @@ class SearchDialog(QDialog):
     def __init__(self, data, parent=None):
         super().__init__(parent)
         self.data = data
+        self.parent = parent
         self.setup_ui()
 
     def setup_ui(self):
-        self.setWindowTitle("Buscar")
-        self.setFixedSize(400, 200)
+        self.setWindowTitle("Buscar Paciente")
+        self.setFixedSize(500, 400)
 
         layout = QVBoxLayout(self)
-        form_layout = QFormLayout()
 
+        # Grupo de búsqueda
+        search_group = QWidget()
+        search_layout = QVBoxLayout(search_group)
+
+        # Selector de tipo de búsqueda
+        self.search_type = QComboBox()
+        self.search_type.addItems(["Cédula", "Nombre", "Apellido"])
+        self.search_type.currentTextChanged.connect(self.update_placeholder)
+        search_layout.addWidget(QLabel("Buscar por:"))
+        search_layout.addWidget(self.search_type)
+
+        # Campo de búsqueda
         self.search_input = QLineEdit()
-        self.case_checkbox = QCheckBox("Coincidir mayúsculas/minúsculas")
-        self.replace_checkbox = QCheckBox("Habilitar reemplazo")
+        self.search_input.setPlaceholderText("Ingrese el número de cédula...")
+        search_layout.addWidget(self.search_input)
 
-        form_layout.addRow("Buscar:", self.search_input)
-        form_layout.addRow(self.case_checkbox)
-        form_layout.addRow(self.replace_checkbox)
-
+        # Botón de búsqueda
         self.search_btn = QPushButton("Buscar")
-        self.replace_btn = QPushButton("Reemplazar")
-        self.replace_btn.setEnabled(False)
+        self.search_btn.clicked.connect(self.search_patient)
+        search_layout.addWidget(self.search_btn)
 
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.search_btn)
-        button_layout.addWidget(self.replace_btn)
+        # Tabla de resultados
+        self.results_table = QTableWidget()
+        self.results_table.setColumnCount(4)  # Cédula, Nombre, Apellido, Acciones
+        self.results_table.setHorizontalHeaderLabels(["Cédula", "Nombre", "Apellido", "Acciones"])
+        self.results_table.horizontalHeader().setStretchLastSection(True)
 
-        layout.addLayout(form_layout)
-        layout.addLayout(button_layout)
+        # Botones de acción
+        action_group = QWidget()
+        action_layout = QHBoxLayout(action_group)
 
-        # Conexiones
-        self.replace_checkbox.toggled.connect(self.replace_btn.setEnabled)
-        self.search_btn.clicked.connect(self.find_matches)
-        self.replace_btn.clicked.connect(self.open_replace_dialog)
+        self.edit_btn = QPushButton("Editar")
+        self.edit_btn.clicked.connect(self.edit_selected)
+        self.edit_btn.setEnabled(False)
 
-    def find_matches(self):
-        search_text = self.search_input.text()
-        case_sensitive = self.case_checkbox.isChecked()
+        self.close_btn = QPushButton("Cerrar")
+        self.close_btn.clicked.connect(self.close)
 
-        if not search_text:
-            QMessageBox.warning(self, "Advertencia", "Ingrese un texto a buscar")
+        action_layout.addWidget(self.edit_btn)
+        action_layout.addWidget(self.close_btn)
+
+        # Añadir widgets al layout principal
+        layout.addWidget(search_group)
+        layout.addWidget(self.results_table)
+        layout.addWidget(action_group)
+
+        # Conectar selección de tabla con habilitación del botón editar
+        self.results_table.itemSelectionChanged.connect(self.handle_selection)
+
+    def update_placeholder(self):
+        """Actualiza el placeholder según el tipo de búsqueda seleccionado"""
+        search_type = self.search_type.currentText()
+        if search_type == "Cédula":
+            self.search_input.setPlaceholderText("Ingrese el número de cédula...")
+        elif search_type == "Nombre":
+            self.search_input.setPlaceholderText("Ingrese el nombre...")
+        else:  # Apellido
+            self.search_input.setPlaceholderText("Ingrese el apellido...")
+
+    def search_patient(self):
+        search_term = self.search_input.text().strip()
+        if not search_term:
+            QMessageBox.warning(self, "Advertencia", "Por favor ingrese un término de búsqueda")
             return
 
+        search_type = self.search_type.currentText()
+        results = pd.DataFrame()
+
         try:
-            if case_sensitive:
-                matches = self.data.apply(lambda col: col.astype(str).str.contains(search_text)).sum().sum()
-            else:
-                matches = self.data.apply(lambda col: col.astype(str).str.contains(search_text, case=False)).sum().sum()
+            # Convertir a minúsculas para búsqueda insensible a mayúsculas/minúsculas
+            search_term_lower = search_term.lower()
 
-            QMessageBox.information(
-                self,
-                "Resultados de búsqueda",
-                f"Se encontraron {matches} coincidencias de '{search_text}'"
-            )
+            if search_type == "Cédula":
+                results = self.data[self.data['Cédula'].astype(str).str.contains(search_term, case=False)]
+            elif search_type == "Nombre":
+                results = self.data[self.data['Nombre'].astype(str).str.lower().str.contains(search_term_lower)]
+            else:  # Apellido
+                results = self.data[self.data['Apellido'].astype(str).str.lower().str.contains(search_term_lower)]
+
+            self.display_results(results)
+
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Error en búsqueda: {str(e)}")
+            QMessageBox.critical(self, "Error", f"Error en la búsqueda: {str(e)}")
 
-    def open_replace_dialog(self):
-        self.replace_dialog = ReplaceDialog(self)
-        if self.replace_dialog.exec():
-            replace_text = self.replace_dialog.replace_input.text()
-            self.parent().perform_replace(
-                self.search_input.text(),
-                replace_text,
-                self.case_checkbox.isChecked()
-            )
+    def display_results(self, results):
+        self.results_table.setRowCount(0)
+        if results.empty:
+            QMessageBox.information(self, "Resultados", "No se encontraron coincidencias")
+            return
+
+        for index, row in results.iterrows():
+            current_row = self.results_table.rowCount()
+            self.results_table.insertRow(current_row)
+
+            # Añadir datos básicos
+            self.results_table.setItem(current_row, 0, QTableWidgetItem(str(row['Cédula'])))
+            self.results_table.setItem(current_row, 1, QTableWidgetItem(str(row['Nombre'])))
+            self.results_table.setItem(current_row, 2, QTableWidgetItem(str(row['Apellido'])))
+
+            # Botón de editar en la última columna
+            edit_btn = QPushButton("✏️")
+            edit_btn.clicked.connect(lambda checked, row_idx=index: self.edit_record(row_idx))
+            self.results_table.setCellWidget(current_row, 3, edit_btn)
+
+        self.results_table.resizeColumnsToContents()
+
+    def handle_selection(self):
+        self.edit_btn.setEnabled(len(self.results_table.selectedItems()) > 0)
+
+    def edit_selected(self):
+        selected_items = self.results_table.selectedItems()
+        if selected_items:
+            cedula = selected_items[0].text()  # Obtener la cédula de la primera columna
+            matching_rows = self.data[self.data['Cédula'].astype(str) == cedula].index
+            if not matching_rows.empty:
+                self.edit_record(matching_rows[0])
+
+    def edit_record(self, row_index):
+        try:
+            row_data = self.data.iloc[row_index].to_dict()
+            dialog = EditDialog(self.data.columns.tolist(), row_data, self)
+
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                # Actualizar datos en el DataFrame principal
+                new_data = {col: dialog.inputs[col].text() if isinstance(dialog.inputs[col], QLineEdit)
+                else dialog.inputs[col].currentText()
+                            for col in self.data.columns}
+
+                self.data.loc[row_index] = new_data
+                self.parent.data = self.data  # Actualizar datos en la ventana principal
+                self.parent.populate_table()  # Actualizar la tabla principal
+
+                # Actualizar la tabla de resultados
+                self.search_patient()  # Refrescar resultados
+                QMessageBox.information(self, "Éxito", "Registro actualizado correctamente")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Error al editar el registro: {str(e)}")
 
 
 # ========================= VENTANA PARA REEMPLAZAR =========================
@@ -618,8 +796,17 @@ class EditDialog(QDialog):
             layout.addWidget(self.inputs[col])
 
         self.save_btn = QPushButton("Guardar Cambios")
-        self.save_btn.clicked.connect(self.accept)
+        self.save_btn.clicked.connect(self.collect_data)
         layout.addWidget(self.save_btn)
+
+    def collect_data(self):
+        self.updated_data = {}
+        for col, widget in self.inputs.items():
+            if isinstance(widget, QComboBox):
+                self.updated_data[col] = widget.currentText()
+            else:
+                self.updated_data[col] = widget.text()
+        self.accept()
 
 
 # ======================= VENTANA PRINCIPAL =======================
@@ -685,7 +872,7 @@ class DataAnalysisApp(QMainWindow):
             ("Nuevo Registro", "icons/new.png", self.new_document),  # Nuevo botón
             ("Cargar Registro", "icons/load.png", self.load_data),
             ("Editar Paciente", "icons/edit.png", self.edit_data),
-            ("Buscar/Reemplazar", "icons/search.png", self.search_replace),
+            ("Buscar Paciente", "icons/search.png", self.search_replace),
             ("Añadir Paciente", "icons/add.png", self.add_data),
             ("Análisis Básico", "icons/analysis.png", self.show_basic_analysis),
             ("Generar Gráfica", "icons/graph.png", self.generate_graph),
@@ -775,9 +962,7 @@ class DataAnalysisApp(QMainWindow):
             return
 
         dialog = SearchDialog(self.data, self)
-        if dialog.exec():
-            # La lógica de reemplazo se maneja desde el diálogo
-            pass
+        dialog.exec()
 
     # Realizar la operación de reemplazo en los datos
     def perform_replace(self, search_text, replace_text, case_sensitive):
@@ -844,18 +1029,24 @@ class DataAnalysisApp(QMainWindow):
                 try:
                     new_row = {}
                     for col in self.data.columns:
-                        value = dialog.inputs[col].text()
-                        # Conversión automática de tipos de datos
-                        if col in ["Edad", "Saturación_Oxígeno", "Pulso", "Temperatura", "IMC"]:
-                            new_row[col] = float(value) if '.' in value else int(value)
-                        elif col == "Presión_Arterial":
-                            new_row[col] = value  # Mantener como string
-                        else:
-                            new_row[col] = value
+                        widget = dialog.inputs[col]
+                        value = widget.currentText() if isinstance(widget, QComboBox) else widget.text()
 
+                        # Intentar conversión de tipos si la columna es numérica
+                        if col in ["Edad", "Saturación_Oxígeno", "Pulso", "Temperatura", "IMC"]:
+                            try:
+                                new_row[col] = float(value) if '.' in value else int(value)
+                            except ValueError:
+                                new_row[col] = None  # Si la conversión falla, asigna None
+
+                        else:
+                            new_row[col] = value  # Para columnas de texto, mantener el valor sin cambios
+
+                    # Añadir la fila al DataFrame
                     self.data = pd.concat([self.data, pd.DataFrame([new_row])], ignore_index=True)
                     self.populate_table()
                     QMessageBox.information(self, "Éxito", "Registro añadido exitosamente")
+
                 except ValueError as ve:
                     self.show_error(f"Error de formato: {str(ve)}")
                 except Exception as e:
