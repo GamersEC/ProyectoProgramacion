@@ -29,14 +29,26 @@ apellidos = ["Pérez", "González", "Martínez", "Rodríguez", "Sánchez", "Día
              "Villarreal", "Salas", "Montero", "Maldonado", "Téllez", "Bermúdez", "Vallejo",
              "Quiroga", "Cardozo", "Ledesma", "Cuellar", "Sepúlveda", "Reynoso", "Gudiño"]
 
-sexos = ["Masculino", "Femenino"]
+sexos = ["Masculino", "Femenino", "Intersex"]
+probabilidades = [0.48, 0.48, 0.04]
+
+# Función para generar un número de cédula único de 10 dígitos
+def generar_cedulas_unicas(n):
+    cedulas = set()
+    while len(cedulas) < n:
+        cedulas.add("".join(map(str, np.random.randint(0, 10, 10))))
+    return list(cedulas)
+
+# Generar cédulas únicas
+cedulas_unicas = generar_cedulas_unicas(n)
 
 # Crear DataFrame con datos médicos
 data = {
+    'Cédula': cedulas_unicas,
     'Nombre': np.random.choice(nombres, n, replace=True),
     'Apellido': np.random.choice(apellidos, n, replace=True),
     'Edad': np.random.randint(18, 80, n),
-    'Sexo': np.random.choice(sexos, n),
+    'Sexo': np.random.choice(sexos, n, p=probabilidades),  # Probabilidad ajustada
     'Saturación_Oxígeno': np.random.randint(88, 100, n),
     'Presión_Arterial': [f"{np.random.randint(100, 160)}/{np.random.randint(60, 100)}" for _ in range(n)],
     'Pulso': np.random.randint(60, 110, n),
